@@ -6,20 +6,54 @@
 <title>Trading Floor Dashboard · Warsaw</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{height:100%;overflow:hidden;background:#06090F;color:#DCE8F8;font-family:"SF Mono","Fira Code","Menlo",monospace}
+html,body{height:100%;overflow:hidden;font-family:"SF Mono","Fira Code","Menlo",monospace}
 button{font-family:inherit;cursor:pointer}
 ::-webkit-scrollbar{width:4px}
-::-webkit-scrollbar-thumb{background:#1A2840;border-radius:4px}
-.tw{display:flex;background:#0C1220;border-radius:7px;padding:2px;gap:2px}
-.tb{background:transparent;color:#3D5068;border:none;border-radius:5px;padding:3px 9px;font-size:9px;font-weight:700;white-space:nowrap}
-.tb.on{background:#141E2E;color:#DCE8F8}
+::-webkit-scrollbar-thumb{border-radius:4px}
 </style>
+<style id="dynCSS"></style>
 </head>
 <body>
 <div id="app" style="height:100vh;display:flex;flex-direction:column;padding:8px 12px;gap:7px;overflow:hidden"></div>
 <script>
-const G='#00D97E',R='#F04060',A='#F5A623',B='#4A9EFF';
-const MUT='#3D5068',DIM='#7A90A8',TXT='#DCE8F8',SUR='#0C1220',SUB='#141E2E',BRD='#182030',BH='#1E2E48';
+// ── THEMES ────────────────────────────────────────────────────────────────────
+const THEMES = {
+  dark: {
+    bg:'#06090F', sur:'#0C1220', card:'#101828', brd:'#182030', bh:'#1E2E48',
+    g:'#00D97E', r:'#F04060', a:'#F5A623', b:'#4A9EFF',
+    txt:'#DCE8F8', mut:'#3D5068', dim:'#7A90A8', sub:'#141E2E',
+    twBg:'#0C1220', tbCol:'#3D5068', tbOnBg:'#141E2E', tbOnCol:'#DCE8F8',
+    scrThumb:'#1A2840', bodyBg:'#06090F', bodyCol:'#DCE8F8',
+    btnTheme:'☀ Light', dot:'#00D97E'
+  },
+  light: {
+    bg:'#EDF0F5', sur:'#FFFFFF', card:'#FFFFFF', brd:'#D8DEEA', bh:'#C0CADA',
+    g:'#1A7A4A', r:'#BE2D3A', a:'#9A6200', b:'#1E5CA8',
+    txt:'#1A2535', mut:'#7A8FA8', dim:'#9AAABB', sub:'#F0F3F8',
+    twBg:'#E4E8F0', tbCol:'#7A8FA8', tbOnBg:'#FFFFFF', tbOnCol:'#1A2535',
+    scrThumb:'#C0CADA', bodyBg:'#EDF0F5', bodyCol:'#1A2535',
+    btnTheme:'☾ Dark', dot:'#1A7A4A'
+  }
+};
+
+let T = THEMES.dark;
+
+function applyTheme(name) {
+  T = THEMES[name];
+  document.body.style.background = T.bodyBg;
+  document.body.style.color = T.bodyCol;
+  document.getElementById('dynCSS').textContent =
+    `::-webkit-scrollbar-thumb{background:${T.scrThumb}}` +
+    `.tw{display:flex;background:${T.twBg};border-radius:7px;padding:2px;gap:2px}` +
+    `.tb{background:transparent;color:${T.tbCol};border:none;border-radius:5px;padding:3px 9px;font-size:9px;font-weight:700;white-space:nowrap}` +
+    `.tb.on{background:${T.tbOnBg};color:${T.tbOnCol}}`;
+}
+applyTheme('dark');
+
+// Shorthand aliases (always reflect current theme via functions)
+const G=()=>T.g, R=()=>T.r, A=()=>T.a, B=()=>T.b;
+const MUT=()=>T.mut, DIM=()=>T.dim, TXT=()=>T.txt, SUR=()=>T.sur;
+const SUB=()=>T.sub, BRD=()=>T.brd, BH=()=>T.bh, CARD=()=>T.card;
 
 // ── DAILY DATA ────────────────────────────────────────────────────────────────
 // perf: 0=top, 1=bottom — controls curve shape for normalized comparison
@@ -168,7 +202,7 @@ const BLK   = [{c:'LE G27',e:'27-02-26',t:['FZR','HWP']},{c:'HE G27',e:'27-02-12
 const fmt  = n => {const a=Math.abs(n),s=n<0?'−':'+';return a>=1e6?`${s}$${(a/1e6).toFixed(2)}M`:a>=1000?`${s}$${(a/1000).toFixed(0)}K`:`${s}$${a}`;};
 const fmtM = n => {const a=Math.abs(n),s=n<0?'−':'+';return a>=1e6?`${s}$${(a/1e6).toFixed(1)}M`:fmt(n);};
 const fv   = n => n>=1000?`${(n/1000).toFixed(0)}K`:`${n}`;
-const gc   = n => n>=0?G:R;
+const gc = n => n>=0?G():R();
 const pct  = (v,total) => total>0?(v/total*100).toFixed(1)+'%':'—';
 
 // ── DOM ───────────────────────────────────────────────────────────────────────
@@ -185,7 +219,7 @@ function tag(text,color){const t=document.createElement('span');t.style.cssText=
 function hdr(text,color){
   const w=div({display:'flex',alignItems:'center',gap:'6px',marginBottom:'10px',flexShrink:'0'});
   w.appendChild(div({width:'3px',height:'12px',background:color||B,borderRadius:'2px'}));
-  w.appendChild(span({fontSize:'9px',fontWeight:'700',letterSpacing:'0.1em',color:MUT},text));
+  w.appendChild(span({fontSize:'9px',fontWeight:'700',letterSpacing:'0.1em',color:MUT()},text));
   return w;
 }
 function togRow(opts,active,fn){
@@ -196,14 +230,14 @@ function togRow(opts,active,fn){
 function progBar(pct_){
   const c=pct_>=90?R:pct_>=70?A:G;
   return div({display:'flex',flexDirection:'column',gap:'3px'},[
-    div({display:'flex',justifyContent:'space-between'},[span({fontSize:'9px',color:DIM},`${pct_.toFixed(0)}% used`),span({fontSize:'9px',fontWeight:'700',color:c},pct_>=90?'CRITICAL':pct_>=70?'CAUTION':'—')]),
-    div({background:SUB,borderRadius:'99px',height:'4px'},[div({width:`${Math.min(pct_,100)}%`,background:c,borderRadius:'99px',height:'4px'})])
+    div({display:'flex',justifyContent:'space-between'},[span({fontSize:'9px',color:DIM()},`${pct_.toFixed(0)}% used`),span({fontSize:'9px',fontWeight:'700',color:c},pct_>=90?'CRITICAL':pct_>=70?'CAUTION':'—')]),
+    div({background:SUB(),borderRadius:'99px',height:'4px'},[div({width:`${Math.min(pct_,100)}%`,background:c,borderRadius:'99px',height:'4px'})])
   ]);
 }
 function secHdr(text,color){
   const w=div({display:'flex',alignItems:'center',gap:'6px',marginBottom:'10px',flexShrink:'0'});
   w.appendChild(div({width:'3px',height:'12px',background:color||B,borderRadius:'2px'}));
-  w.appendChild(span({fontSize:'9px',fontWeight:'700',letterSpacing:'0.1em',color:MUT},text));
+  w.appendChild(span({fontSize:'9px',fontWeight:'700',letterSpacing:'0.1em',color:MUT()},text));
   return w;
 }
 
@@ -233,16 +267,16 @@ function ytdChart(data){
   s.style.cssText='width:100%;height:220px;display:block';
   [0,0.25,0.5,0.75,1].forEach(t=>{
     const yy=pt+t*ch;
-    s.appendChild(mkSVG('line',{x1:pl,y1:yy,x2:w-pr,y2:yy,stroke:BRD,'stroke-dasharray':'3,3'}));
-    const vt=mkSVG('text',{x:pl-6,y:yy+4,'text-anchor':'end',fill:MUT,'font-size':'9'});vt.textContent=fmt(mx-t*(mx-mn));s.appendChild(vt);
+    s.appendChild(mkSVG('line',{x1:pl,y1:yy,x2:w-pr,y2:yy,stroke:BRD(),'stroke-dasharray':'3,3'}));
+    const vt=mkSVG('text',{x:pl-6,y:yy+4,'text-anchor':'end',fill:MUT(),'font-size':'9'});vt.textContent=fmt(mx-t*(mx-mn));s.appendChild(vt);
   });
-  if(mn<0&&mx>0) s.appendChild(mkSVG('line',{x1:pl,y1:py(0),x2:w-pr,y2:py(0),stroke:MUT,'stroke-dasharray':'4,3'}));
-  data.forEach((d,i)=>{if(!d.lbl)return;const xt=mkSVG('text',{x:px(i),y:h-5,'text-anchor':'middle',fill:MUT,'font-size':'9'});xt.textContent=d.lbl;s.appendChild(xt);});
-  s.appendChild(mkSVG('polyline',{points:data.map((d,i)=>`${px(i)},${py(d.ma)}`).join(' '),fill:'none',stroke:A,'stroke-width':'1.5','stroke-dasharray':'5,3'}));
-  s.appendChild(mkSVG('polyline',{points:data.map((d,i)=>`${px(i)},${py(d.pnl)}`).join(' '),fill:'none',stroke:B,'stroke-width':'2.5'}));
+  if(mn<0&&mx>0) s.appendChild(mkSVG('line',{x1:pl,y1:py(0),x2:w-pr,y2:py(0),stroke:MUT(),'stroke-dasharray':'4,3'}));
+  data.forEach((d,i)=>{if(!d.lbl)return;const xt=mkSVG('text',{x:px(i),y:h-5,'text-anchor':'middle',fill:MUT(),'font-size':'9'});xt.textContent=d.lbl;s.appendChild(xt);});
+  s.appendChild(mkSVG('polyline',{points:data.map((d,i)=>`${px(i)},${py(d.ma)}`).join(' '),fill:'none',stroke:A(),'stroke-width':'1.5','stroke-dasharray':'5,3'}));
+  s.appendChild(mkSVG('polyline',{points:data.map((d,i)=>`${px(i)},${py(d.pnl)}`).join(' '),fill:'none',stroke:B(),'stroke-width':'2.5'}));
   const last=data[data.length-1];
-  s.appendChild(mkSVG('circle',{cx:px(data.length-1),cy:py(last.pnl),r:'4',fill:B}));
-  s.appendChild(mkSVG('circle',{cx:px(data.length-1),cy:py(last.ma),r:'3',fill:A}));
+  s.appendChild(mkSVG('circle',{cx:px(data.length-1),cy:py(last.pnl),r:'4',fill:B()}));
+  s.appendChild(mkSVG('circle',{cx:px(data.length-1),cy:py(last.ma),r:'3',fill:A()}));
   return s;
 }
 
@@ -258,30 +292,30 @@ function compChart(traderNorm,deskNorm,tc){
   [-100,-50,0,50,100].filter(v=>v>=mn&&v<=mx).forEach(v=>{
     const yy=py(v);
     s.appendChild(mkSVG('line',{x1:pl,y1:yy,x2:w-pr,y2:yy,stroke:v===0?MUT:BRD,'stroke-dasharray':v===0?'4,3':'3,3'}));
-    const yt=mkSVG('text',{x:pl-6,y:yy+4,'text-anchor':'end',fill:MUT,'font-size':'9'});yt.textContent=v+'%';s.appendChild(yt);
+    const yt=mkSVG('text',{x:pl-6,y:yy+4,'text-anchor':'end',fill:MUT(),'font-size':'9'});yt.textContent=v+'%';s.appendChild(yt);
   });
   // Month labels
   ({0:'Jan',18:'Feb',37:'Mar',56:'Apr',74:'May',92:'Jun'}).toString();
   const ML={0:'Jan',18:'Feb',37:'Mar',56:'Apr',74:'May',92:'Jun'};
-  Object.entries(ML).forEach(([i,l])=>{const xt=mkSVG('text',{x:px(+i),y:h-8,'text-anchor':'middle',fill:MUT,'font-size':'9'});xt.textContent=l;s.appendChild(xt);});
+  Object.entries(ML).forEach(([i,l])=>{const xt=mkSVG('text',{x:px(+i),y:h-8,'text-anchor':'middle',fill:MUT(),'font-size':'9'});xt.textContent=l;s.appendChild(xt);});
   // Area under trader
   s.appendChild(mkSVG('path',{d:'M'+px(0)+','+py(0)+' '+traderNorm.map((v,i)=>`L${px(i)},${py(v)}`).join(' ')+` L${px(N-1)},${py(0)} Z`,fill:tc,opacity:'0.07'}));
   // Desk line
-  s.appendChild(mkSVG('polyline',{points:deskNorm.map((v,i)=>`${px(i)},${py(v)}`).join(' '),fill:'none',stroke:G,'stroke-width':'1.5','stroke-dasharray':'5,3',opacity:'0.85'}));
+  s.appendChild(mkSVG('polyline',{points:deskNorm.map((v,i)=>`${px(i)},${py(v)}`).join(' '),fill:'none',stroke:G(),'stroke-width':'1.5','stroke-dasharray':'5,3',opacity:'0.85'}));
   // Trader line
   s.appendChild(mkSVG('polyline',{points:traderNorm.map((v,i)=>`${px(i)},${py(v)}`).join(' '),fill:'none',stroke:tc,'stroke-width':'2.5'}));
   // End labels
   const tf=traderNorm[N-1],df=deskNorm[N-1];
-  s.appendChild(mkSVG('circle',{cx:px(N-1),cy:py(df),r:'3',fill:G}));
+  s.appendChild(mkSVG('circle',{cx:px(N-1),cy:py(df),r:'3',fill:G()}));
   s.appendChild(mkSVG('circle',{cx:px(N-1),cy:py(tf),r:'4',fill:tc}));
   const tLabel=mkSVG('text',{x:px(N-1)+8,y:py(tf)+4,'text-anchor':'start',fill:tc,'font-size':'10','font-weight':'700'});tLabel.textContent=tf.toFixed(1)+'%';s.appendChild(tLabel);
-  const dLabel=mkSVG('text',{x:px(N-1)+8,y:py(df)+4,'text-anchor':'start',fill:G,'font-size':'10'});dLabel.textContent=df.toFixed(1)+'%';s.appendChild(dLabel);
+  const dLabel=mkSVG('text',{x:px(N-1)+8,y:py(df)+4,'text-anchor':'start',fill:G(),'font-size':'10'});dLabel.textContent=df.toFixed(1)+'%';s.appendChild(dLabel);
   return s;
 }
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
-const S={pv:'Top 5',tv:'Top 5',modal:false,tModal:null,compModal:null};
-const set=(k,v)=>{S[k]=v;render();};
+const S={pv:'Top 5',tv:'Top 5',modal:false,tModal:null,compModal:null,theme:'dark'};
+const set=(k,v)=>{S[k]=v;if(k==='theme'){applyTheme(v);}render();};
 
 // ── MODALS ────────────────────────────────────────────────────────────────────
 function overlay(onClose){
@@ -290,16 +324,16 @@ function overlay(onClose){
   return ov;
 }
 function modalBox(w_){
-  const b=div({background:'#101828',border:`1px solid ${BH}`,borderRadius:'14px',padding:'28px',width:w_||'80%',maxWidth:'900px'});
+  const b=div({background:CARD(),border:`1px solid ${BH()}`,borderRadius:'14px',padding:'28px',width:w_||'80%',maxWidth:'900px'});
   b.addEventListener('click',e=>e.stopPropagation());
   return b;
 }
-function closeBtn(fn){return btn('✕ Close',{background:SUB,border:'none',color:DIM,borderRadius:'7px',padding:'6px 14px',fontSize:'11px'},fn);}
+function closeBtn(fn){return btn('✕ Close',{background:SUB(),border:'none',color:DIM(),borderRadius:'7px',padding:'6px 14px',fontSize:'11px'},fn);}
 
 function buildPnLModal(){
   const ov=overlay(()=>set('modal',false)), box=modalBox('80%');
   box.appendChild(div({display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'20px'},[
-    div({},[span({fontSize:'9px',color:MUT,letterSpacing:'0.1em',display:'block',marginBottom:'4px'},'DESK P&L — INTRADAY'),span({fontSize:'34px',fontWeight:'700',color:G,display:'block'},'+$842,000'),span({fontSize:'10px',color:DIM,display:'block',marginTop:'2px'},'vs +$620K yesterday · 142,840 lots')]),
+    div({},[span({fontSize:'9px',color:MUT(),letterSpacing:'0.1em',display:'block',marginBottom:'4px'},'DESK P&L — INTRADAY'),span({fontSize:'34px',fontWeight:'700',color:G(),display:'block'},'+$842,000'),span({fontSize:'10px',color:DIM(),display:'block',marginTop:'2px'},'vs +$620K yesterday · 142,840 lots')]),
     closeBtn(()=>set('modal',false))
   ]));
   const ch=sparkline(PNL_CURVE,G);ch.style.cssText='width:100%;height:180px;display:block';
@@ -312,21 +346,21 @@ function buildYTDModal(t){
   const ov=overlay(()=>set('tModal',null)), box=modalBox('82%');
   box.appendChild(div({display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'18px'},[
     div({},[
-      div({display:'flex',alignItems:'center',gap:'10px',marginBottom:'8px'},[span({fontSize:'26px',fontWeight:'700',color:TXT},t.n),tag(t.b,MUT),tag(`−${pb}% vs 30d avg`,A),tag(`${t.d}d below`,A)]),
+      div({display:'flex',alignItems:'center',gap:'10px',marginBottom:'8px'},[span({fontSize:'26px',fontWeight:'700',color:TXT()},t.n),tag(t.b,MUT),tag(`−${pb}% vs 30d avg`,A),tag(`${t.d}d below`,A)]),
       div({display:'flex',gap:'28px'},[
-        div({},[span({fontSize:'9px',color:MUT,display:'block',marginBottom:'2px'},'YTD P&L'),span({fontSize:'20px',fontWeight:'700',color:R},fmt(last.pnl))]),
-        div({},[span({fontSize:'9px',color:MUT,display:'block',marginBottom:'2px'},'30-Day Avg'),span({fontSize:'20px',fontWeight:'700',color:A},fmt(last.ma))]),
-        div({},[span({fontSize:'9px',color:MUT,display:'block',marginBottom:'2px'},'Days Below'),span({fontSize:'20px',fontWeight:'700',color:A},String(t.d))]),
+        div({},[span({fontSize:'9px',color:MUT(),display:'block',marginBottom:'2px'},'YTD P&L'),span({fontSize:'20px',fontWeight:'700',color:R()},fmt(last.pnl))]),
+        div({},[span({fontSize:'9px',color:MUT(),display:'block',marginBottom:'2px'},'30-Day Avg'),span({fontSize:'20px',fontWeight:'700',color:A()},fmt(last.ma))]),
+        div({},[span({fontSize:'9px',color:MUT(),display:'block',marginBottom:'2px'},'Days Below'),span({fontSize:'20px',fontWeight:'700',color:A()},String(t.d))]),
       ])
     ]),
     closeBtn(()=>set('tModal',null))
   ]));
   box.appendChild(div({display:'flex',gap:'20px',marginBottom:'12px'},[
-    div({display:'flex',alignItems:'center',gap:'7px'},[div({width:'20px',height:'2px',background:B,borderRadius:'1px'}),span({fontSize:'10px',color:DIM},'Daily cumulative P&L')]),
-    div({display:'flex',alignItems:'center',gap:'7px'},[div({width:'20px',borderTop:`2px dashed ${A}`}),span({fontSize:'10px',color:DIM},'30-day moving average')]),
+    div({display:'flex',alignItems:'center',gap:'7px'},[div({width:'20px',height:'2px',background:B(),borderRadius:'1px'}),span({fontSize:'10px',color:DIM()},'Daily cumulative P&L')]),
+    div({display:'flex',alignItems:'center',gap:'7px'},[div({width:'20px',borderTop:`2px dashed ${A()}`}),span({fontSize:'10px',color:DIM()},'30-day moving average')]),
   ]));
   box.appendChild(ytdChart(data));
-  box.appendChild(span({fontSize:'9px',color:MUT,display:'block',marginTop:'10px',textAlign:'right'},`Jan–Jun 2026 · ${data.length} trading days`));
+  box.appendChild(span({fontSize:'9px',color:MUT(),display:'block',marginTop:'10px',textAlign:'right'},`Jan–Jun 2026 · ${data.length} trading days`));
   ov.appendChild(box);return ov;
 }
 
@@ -341,26 +375,26 @@ function buildCompModal(trader){
   box.appendChild(div({display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'18px'},[
     div({},[
       div({display:'flex',alignItems:'center',gap:'12px',marginBottom:'10px'},[
-        span({fontSize:'26px',fontWeight:'700',color:TXT},trader.n),
+        span({fontSize:'26px',fontWeight:'700',color:TXT()},trader.n),
         tag(trader.b,MUT),
         tag('YTD '+fmt(trader.ytd),tc),
         tag(status,statusColor)
       ]),
       div({display:'flex',gap:'28px'},[
-        div({},[span({fontSize:'9px',color:MUT,display:'block',marginBottom:'2px'},'Trader (normalized)'),span({fontSize:'20px',fontWeight:'700',color:tc},tf.toFixed(1)+'%')]),
-        div({},[span({fontSize:'9px',color:MUT,display:'block',marginBottom:'2px'},'Desk (normalized)'),span({fontSize:'20px',fontWeight:'700',color:G},df.toFixed(1)+'%')]),
-        div({},[span({fontSize:'9px',color:MUT,display:'block',marginBottom:'2px'},'Difference'),span({fontSize:'20px',fontWeight:'700',color:statusColor},(diff>=0?'+':'')+diff.toFixed(1)+'%')]),
+        div({},[span({fontSize:'9px',color:MUT(),display:'block',marginBottom:'2px'},'Trader (normalized)'),span({fontSize:'20px',fontWeight:'700',color:tc},tf.toFixed(1)+'%')]),
+        div({},[span({fontSize:'9px',color:MUT(),display:'block',marginBottom:'2px'},'Desk (normalized)'),span({fontSize:'20px',fontWeight:'700',color:G()},df.toFixed(1)+'%')]),
+        div({},[span({fontSize:'9px',color:MUT(),display:'block',marginBottom:'2px'},'Difference'),span({fontSize:'20px',fontWeight:'700',color:statusColor},(diff>=0?'+':'')+diff.toFixed(1)+'%')]),
       ])
     ]),
     closeBtn(()=>set('compModal',null))
   ]));
   box.appendChild(div({display:'flex',gap:'24px',marginBottom:'12px'},[
-    div({display:'flex',alignItems:'center',gap:'7px'},[div({width:'20px',height:'2px',background:tc,borderRadius:'1px'}),span({fontSize:'10px',color:DIM},`${trader.n} — normalized trajectory`)]),
-    div({display:'flex',alignItems:'center',gap:'7px'},[div({width:'20px',borderTop:`2px dashed ${G}`}),span({fontSize:'10px',color:DIM},'Desk — normalized trajectory')]),
-    span({fontSize:'9px',color:MUT},'100 = each series\' own peak P&L'),
+    div({display:'flex',alignItems:'center',gap:'7px'},[div({width:'20px',height:'2px',background:tc,borderRadius:'1px'}),span({fontSize:'10px',color:DIM()},`${trader.n} — normalized trajectory`)]),
+    div({display:'flex',alignItems:'center',gap:'7px'},[div({width:'20px',borderTop:`2px dashed ${G()}`}),span({fontSize:'10px',color:DIM()},'Desk — normalized trajectory')]),
+    span({fontSize:'9px',color:MUT()},'100 = each series\' own peak P&L'),
   ]));
   box.appendChild(compChart(trader.normCurve,NORM_DESK,tc));
-  box.appendChild(span({fontSize:'9px',color:MUT,display:'block',marginTop:'10px',textAlign:'right'},'Curves show trajectory and pace — not absolute values'));
+  box.appendChild(span({fontSize:'9px',color:MUT(),display:'block',marginTop:'10px',textAlign:'right'},'Curves show trajectory and pace — not absolute values'));
   ov.appendChild(box);return ov;
 }
 
@@ -374,71 +408,78 @@ function render(){
 
   // TOPBAR
   const tb=div({display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:'0'});
-  tb.appendChild(div({display:'flex',alignItems:'center',gap:'8px'},[div({width:'7px',height:'7px',borderRadius:'50%',background:G,boxShadow:`0 0 8px ${G}`}),span({fontSize:'10px',color:MUT,letterSpacing:'0.12em'},'TRADING FLOOR · WARSAW')]));
-  tb.appendChild(span({fontSize:'10px',color:MUT},`${today} · ${now} CET`));
+  tb.appendChild(div({display:'flex',alignItems:'center',gap:'8px'},[div({width:'7px',height:'7px',borderRadius:'50%',background:T.dot,boxShadow:`0 0 8px ${T.dot}`}),span({fontSize:'10px',color:MUT(),letterSpacing:'0.12em'},'TRADING FLOOR · WARSAW')]));
+  const rightBar=div({display:'flex',alignItems:'center',gap:'12px'});
+  rightBar.appendChild(span({fontSize:'10px',color:MUT()},`${today} · ${now} CET`));
+  const themBtn=document.createElement('button');
+  themBtn.textContent=T.btnTheme;
+  themBtn.style.cssText=`background:${T.sub};color:${T.mut};border:1px solid ${T.brd};border-radius:6px;padding:3px 10px;font-size:9px;font-weight:700;font-family:inherit;cursor:pointer`;
+  themBtn.addEventListener('click',()=>set('theme',S.theme==='dark'?'light':'dark'));
+  rightBar.appendChild(themBtn);
+  tb.appendChild(rightBar);
   app.appendChild(tb);
 
   // METRIC STRIP
   const strip=div({display:'grid',gridTemplateColumns:'2.2fr 1fr 1fr',gap:'7px',flexShrink:'0'});
-  const pc_=div({background:'#101828',border:`1px solid ${BH}`,borderRadius:'10px',padding:'12px 14px',display:'flex',flexDirection:'row',alignItems:'center',gap:'14px',cursor:'pointer'});
+  const pc_=div({background:CARD(),border:`1px solid ${BH()}`,borderRadius:'10px',padding:'12px 14px',display:'flex',flexDirection:'row',alignItems:'center',gap:'14px',cursor:'pointer'});
   pc_.addEventListener('click',()=>set('modal',true));
-  pc_.appendChild(div({minWidth:'130px'},[span({fontSize:'9px',color:MUT,letterSpacing:'0.1em',display:'block',marginBottom:'3px'},'DESK P&L TODAY'),span({fontSize:'28px',fontWeight:'700',color:G,display:'block'},'+$842K'),span({fontSize:'9px',color:DIM,display:'block',marginTop:'2px'},'vs +$620K yesterday')]));
+  pc_.appendChild(div({minWidth:'130px'},[span({fontSize:'9px',color:MUT(),letterSpacing:'0.1em',display:'block',marginBottom:'3px'},'DESK P&L TODAY'),span({fontSize:'28px',fontWeight:'700',color:G(),display:'block'},'+$842K'),span({fontSize:'9px',color:DIM(),display:'block',marginTop:'2px'},'vs +$620K yesterday')]));
   pc_.appendChild(sparkline(PNL_CURVE,G));
-  pc_.appendChild(span({fontSize:'8px',color:B},'↗ EXPAND'));
+  pc_.appendChild(span({fontSize:'8px',color:B()},'↗ EXPAND'));
   strip.appendChild(pc_);
-  const tc_=div({background:'#101828',border:`1px solid ${BRD}`,borderRadius:'10px',padding:'12px 14px',display:'flex',flexDirection:'column'});
-  tc_.appendChild(span({fontSize:'9px',color:MUT,letterSpacing:'0.1em',marginBottom:'8px',display:'block'},'TRADERS TODAY'));
+  const tc_=div({background:CARD(),border:`1px solid ${BRD()}`,borderRadius:'10px',padding:'12px 14px',display:'flex',flexDirection:'column'});
+  tc_.appendChild(span({fontSize:'9px',color:MUT(),letterSpacing:'0.1em',marginBottom:'8px',display:'block'},'TRADERS TODAY'));
   const tg_=div({display:'grid',gridTemplateColumns:'1fr 1fr',gap:'6px 0',flex:'1'});
-  [{l:'Profitable',v:11,c:G},{l:'At Loss',v:3,c:R},{l:'Near Stop',v:3,c:A},{l:'Active',v:17,c:DIM}].forEach(x=>tg_.appendChild(div({},[span({fontSize:'8px',color:MUT,display:'block',marginBottom:'1px'},x.l),span({fontSize:'20px',fontWeight:'700',color:x.c,display:'block',lineHeight:'1.1'},String(x.v))])));
+  [{l:'Profitable',v:11,c:G},{l:'At Loss',v:3,c:R},{l:'Near Stop',v:3,c:A},{l:'Active',v:17,c:DIM}].forEach(x=>tg_.appendChild(div({},[span({fontSize:'8px',color:MUT(),display:'block',marginBottom:'1px'},x.l),span({fontSize:'20px',fontWeight:'700',color:x.c,display:'block',lineHeight:'1.1'},String(x.v))])));
   tc_.appendChild(tg_);strip.appendChild(tc_);
-  const vc_=div({background:'#101828',border:`1px solid ${BRD}`,borderRadius:'10px',padding:'12px 14px',display:'flex',flexDirection:'column'});
-  vc_.appendChild(span({fontSize:'9px',color:MUT,letterSpacing:'0.1em',marginBottom:'3px',display:'block'},'VOLUME TODAY'));
-  vc_.appendChild(span({fontSize:'28px',fontWeight:'700',color:TXT,display:'block'},'142,840'));
-  vc_.appendChild(span({fontSize:'9px',color:DIM,marginTop:'2px',display:'block'},'lots traded'));
+  const vc_=div({background:CARD(),border:`1px solid ${BRD()}`,borderRadius:'10px',padding:'12px 14px',display:'flex',flexDirection:'column'});
+  vc_.appendChild(span({fontSize:'9px',color:MUT(),letterSpacing:'0.1em',marginBottom:'3px',display:'block'},'VOLUME TODAY'));
+  vc_.appendChild(span({fontSize:'28px',fontWeight:'700',color:TXT(),display:'block'},'142,840'));
+  vc_.appendChild(span({fontSize:'9px',color:DIM(),marginTop:'2px',display:'block'},'lots traded'));
   strip.appendChild(vc_);app.appendChild(strip);
 
   // MAIN GRID
   const grid=div({display:'grid',gridTemplateColumns:'1fr 1fr',gridTemplateRows:'1fr 1fr 1fr',gap:'7px',flex:'1',minHeight:'0'});
 
   // ── PRODUCTS ──
-  const prodCard=div({background:'#101828',border:`1px solid ${BRD}`,borderRadius:'10px',padding:'12px 14px',display:'flex',flexDirection:'column',minHeight:'0'});
+  const prodCard=div({background:CARD(),border:`1px solid ${BRD()}`,borderRadius:'10px',padding:'12px 14px',display:'flex',flexDirection:'column',minHeight:'0'});
   prodCard.appendChild(div({display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:'0',marginBottom:'10px'},[secHdr('PRODUCTS',B),togRow(['Top 5','Btm 5','Desk','Firm'],S.pv,v=>set('pv',v))]));
   const pb_=div({overflowY:'auto',flex:'1'});
 
   if(S.pv==='Firm'){
     // Firm view: name | full name | P&L | % of positive total
     const fg=div({display:'grid',gridTemplateColumns:'36px 1fr 72px 52px',gap:'5px 0',alignContent:'start'});
-    ['','','P&L','% FIRM'].forEach((h,i)=>fg.appendChild(span({fontSize:'8px',color:MUT,textAlign:i>=2?'right':'left',display:'block',paddingRight:i===2?'6px':'0'},h)));
+    ['','','P&L','% FIRM'].forEach((h,i)=>fg.appendChild(span({fontSize:'8px',color:MUT(),textAlign:i>=2?'right':'left',display:'block',paddingRight:i===2?'6px':'0'},h)));
     FIRM_P.forEach(p=>{
       const pctVal=(p.p/FIRM_TOTAL*100);
-      fg.appendChild(span({fontSize:'12px',fontWeight:'700',color:TXT},p.n));
-      fg.appendChild(span({fontSize:'10px',color:DIM,paddingLeft:'6px'},p.full));
+      fg.appendChild(span({fontSize:'12px',fontWeight:'700',color:TXT()},p.n));
+      fg.appendChild(span({fontSize:'10px',color:DIM(),paddingLeft:'6px'},p.full));
       fg.appendChild(span({fontSize:'11px',fontWeight:'700',color:gc(p.p),textAlign:'right',display:'block',paddingRight:'6px'},fmtM(p.p)));
       fg.appendChild(span({fontSize:'11px',fontWeight:'600',color:p.p>=0?G:R,textAlign:'right',display:'block'},p.p>=0?'+'+pctVal.toFixed(1)+'%':pctVal.toFixed(1)+'%'));
     });
     pb_.appendChild(fg);
   } else {
     const pg=div({display:'grid',gridTemplateColumns:'44px 1fr 52px',gap:'6px 0',alignContent:'start'});
-    ['','P&L','LOTS'].forEach((h,i)=>pg.appendChild(span({fontSize:'8px',color:MUT,textAlign:i>0?'right':'left',display:'block',paddingRight:i===1?'8px':'0'},h)));
-    prods.forEach(p=>{pg.appendChild(span({fontSize:'14px',fontWeight:'700',color:TXT},p.n));pg.appendChild(span({fontSize:'12px',fontWeight:'700',color:gc(p.p),textAlign:'right',display:'block',paddingRight:'8px'},fmt(p.p)));pg.appendChild(span({fontSize:'10px',color:DIM,textAlign:'right',display:'block'},fv(p.v)));});
+    ['','P&L','LOTS'].forEach((h,i)=>pg.appendChild(span({fontSize:'8px',color:MUT(),textAlign:i>0?'right':'left',display:'block',paddingRight:i===1?'8px':'0'},h)));
+    prods.forEach(p=>{pg.appendChild(span({fontSize:'14px',fontWeight:'700',color:TXT()},p.n));pg.appendChild(span({fontSize:'12px',fontWeight:'700',color:gc(p.p),textAlign:'right',display:'block',paddingRight:'8px'},fmt(p.p)));pg.appendChild(span({fontSize:'10px',color:DIM(),textAlign:'right',display:'block'},fv(p.v)));});
     pb_.appendChild(pg);
   }
   prodCard.appendChild(pb_);grid.appendChild(prodCard);
 
   // ── TRADERS ──
-  const trdCard=div({background:'#101828',border:`1px solid ${BRD}`,borderRadius:'10px',padding:'12px 14px',display:'flex',flexDirection:'column',minHeight:'0'});
+  const trdCard=div({background:CARD(),border:`1px solid ${BRD()}`,borderRadius:'10px',padding:'12px 14px',display:'flex',flexDirection:'column',minHeight:'0'});
   const trh=div({display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:'0',marginBottom:'10px'});
   trh.appendChild(secHdr('TRADERS',B));trh.appendChild(togRow(['Top 5','Btm 5','All'],S.tv,v=>set('tv',v)));
   trdCard.appendChild(trh);
-  if(S.tv==='All') trdCard.appendChild(span({fontSize:'8px',color:MUT,marginBottom:'8px',display:'block',flexShrink:'0'},'↗ Click name to compare vs desk'));
+  if(S.tv==='All') trdCard.appendChild(span({fontSize:'8px',color:MUT(),marginBottom:'8px',display:'block',flexShrink:'0'},'↗ Click name to compare vs desk'));
   const trBody=div({overflowY:'auto',flex:'1'});
   const trGrid=div({display:'grid',gridTemplateColumns:'40px 34px 1fr auto 52px',gap:'6px 0',alignContent:'start'});
   // headers
-  ['','','P&L','','LOTS'].forEach((h,i)=>trGrid.appendChild(span({fontSize:'8px',color:MUT,textAlign:i>=2?'right':'left',display:'block',paddingRight:i===2?'8px':'0'},h)));
+  ['','','P&L','','LOTS'].forEach((h,i)=>trGrid.appendChild(span({fontSize:'8px',color:MUT(),textAlign:i>=2?'right':'left',display:'block',paddingRight:i===2?'8px':'0'},h)));
 
   trdrs.forEach(t=>{
     const isAll=S.tv==='All';
-    const nameEl=span({fontSize:isAll?'12px':'13px',fontWeight:'700',color:TXT,cursor:isAll?'pointer':'default'},t.n);
+    const nameEl=span({fontSize:isAll?'12px':'13px',fontWeight:'700',color:TXT(),cursor:isAll?'pointer':'default'},t.n);
     if(isAll){
       nameEl.style.textDecorationLine='underline';
       nameEl.style.textDecorationColor=MUT;
@@ -446,7 +487,7 @@ function render(){
       nameEl.addEventListener('mouseleave',()=>nameEl.style.color=TXT);
       nameEl.addEventListener('click',()=>set('compModal',t));
     }
-    const batchEl=div({fontSize:'9px',color:MUT,background:SUB,borderRadius:'4px',padding:'1px 4px',textAlign:'center',alignSelf:'center'});
+    const batchEl=div({fontSize:'9px',color:MUT(),background:SUB(),borderRadius:'4px',padding:'1px 4px',textAlign:'center',alignSelf:'center'});
     batchEl.textContent=t.b;
 
     // YTD rank badge (only in All view)
@@ -463,60 +504,60 @@ function render(){
     trGrid.appendChild(batchEl);
     trGrid.appendChild(span({fontSize:isAll?'11px':'12px',fontWeight:'700',color:gc(t.p),textAlign:'right',display:'block',paddingRight:'8px'},fmt(t.p)));
     trGrid.appendChild(badgeEl);
-    trGrid.appendChild(span({fontSize:'10px',color:DIM,textAlign:'right',display:'block'},fv(t.v)));
+    trGrid.appendChild(span({fontSize:'10px',color:DIM(),textAlign:'right',display:'block'},fv(t.v)));
   });
   trBody.appendChild(trGrid);trdCard.appendChild(trBody);grid.appendChild(trdCard);
 
   // ── HARD STOP ──
-  const sc=div({background:'#101828',border:`1px solid ${R}40`,borderRadius:'10px',padding:'12px 14px',display:'flex',flexDirection:'column',minHeight:'0'});
+  const sc=div({background:CARD(),border:`1px solid ${R()}40`,borderRadius:'10px',padding:'12px 14px',display:'flex',flexDirection:'column',minHeight:'0'});
   sc.appendChild(div({display:'flex',alignItems:'center',gap:'8px',flexShrink:'0',marginBottom:'10px'},[secHdr('NEAR HARD STOP',R),tag(String(STOPS.length),R)]));
   const sb=div({display:'flex',flexDirection:'column',gap:'7px',flex:'1',overflowY:'auto'});
   STOPS.forEach(t=>{
     const p_=Math.abs(t.l)/Math.abs(t.lim)*100;
-    const r=div({background:SUR,borderRadius:'8px',padding:'9px 11px',border:`1px solid ${p_>=90?R+'40':BRD}`});
-    r.appendChild(div({display:'flex',justifyContent:'space-between',marginBottom:'6px'},[div({display:'flex',alignItems:'center',gap:'7px'},[span({fontSize:'14px',fontWeight:'700',color:TXT},t.n),tag(t.b,MUT)]),span({fontSize:'14px',fontWeight:'700',color:R},fmt(t.l))]));
+    const r=div({background:SUR(),borderRadius:'8px',padding:'9px 11px',border:`1px solid ${p_>=90?R+'40':BRD}`});
+    r.appendChild(div({display:'flex',justifyContent:'space-between',marginBottom:'6px'},[div({display:'flex',alignItems:'center',gap:'7px'},[span({fontSize:'14px',fontWeight:'700',color:TXT()},t.n),tag(t.b,MUT)]),span({fontSize:'14px',fontWeight:'700',color:R()},fmt(t.l))]));
     r.appendChild(progBar(p_));
-    const rl=div({marginTop:'5px'});rl.appendChild(span({fontSize:'9px',color:MUT},`Limit: ${fmt(t.lim)}  ·  Primary: `));rl.appendChild(span({fontSize:'9px',color:A,fontWeight:'700'},t.m));r.appendChild(rl);
+    const rl=div({marginTop:'5px'});rl.appendChild(span({fontSize:'9px',color:MUT()},`Limit: ${fmt(t.lim)}  ·  Primary: `));rl.appendChild(span({fontSize:'9px',color:A(),fontWeight:'700'},t.m));r.appendChild(rl);
     sb.appendChild(r);
   });
   sc.appendChild(sb);grid.appendChild(sc);
 
   // ── BELOW MA ──
-  const mc=div({background:'#101828',border:`1px solid ${A}40`,borderRadius:'10px',padding:'12px 14px',display:'flex',flexDirection:'column',minHeight:'0'});
+  const mc=div({background:CARD(),border:`1px solid ${A()}40`,borderRadius:'10px',padding:'12px 14px',display:'flex',flexDirection:'column',minHeight:'0'});
   mc.appendChild(div({display:'flex',alignItems:'center',gap:'8px',flexShrink:'0',marginBottom:'6px'},[secHdr('P&L BELOW 30-DAY AVG',A),tag(String(BMA.length),A)]));
-  mc.appendChild(span({fontSize:'8px',color:MUT,marginBottom:'8px',display:'block',flexShrink:'0'},'↗ Click trader to view YTD chart'));
+  mc.appendChild(span({fontSize:'8px',color:MUT(),marginBottom:'8px',display:'block',flexShrink:'0'},'↗ Click trader to view YTD chart'));
   const mb=div({display:'flex',flexDirection:'column',gap:'7px',flex:'1',overflowY:'auto'});
   BMA.forEach(t=>{
     const pb=t.ma>0?Math.round((t.ma-t.ytd)/t.ma*100):0;
-    const r=div({background:SUR,borderRadius:'8px',padding:'9px 11px',border:`1px solid ${BRD}`,cursor:'pointer'});
+    const r=div({background:SUR(),borderRadius:'8px',padding:'9px 11px',border:`1px solid ${BRD()}`,cursor:'pointer'});
     r.addEventListener('mouseenter',()=>r.style.borderColor=A+'60');r.addEventListener('mouseleave',()=>r.style.borderColor=BRD);
     r.addEventListener('click',()=>set('tModal',t));
-    r.appendChild(div({display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'5px'},[div({display:'flex',alignItems:'center',gap:'7px'},[span({fontSize:'14px',fontWeight:'700',color:TXT},t.n),tag(t.b,MUT)]),div({display:'flex',alignItems:'center',gap:'8px'},[span({fontSize:'9px',color:A},`−${pb}% · ${t.d}d`),span({fontSize:'11px',color:A},'↗')])]));
-    r.appendChild(div({display:'flex',gap:'20px'},[div({},[span({fontSize:'8px',color:MUT,display:'block',marginBottom:'1px'},'YTD P&L'),span({fontSize:'12px',fontWeight:'600',color:R},fmt(t.ytd))]),div({},[span({fontSize:'8px',color:MUT,display:'block',marginBottom:'1px'},'30d Avg'),span({fontSize:'12px',color:DIM},fmt(t.ma))])]));
+    r.appendChild(div({display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'5px'},[div({display:'flex',alignItems:'center',gap:'7px'},[span({fontSize:'14px',fontWeight:'700',color:TXT()},t.n),tag(t.b,MUT)]),div({display:'flex',alignItems:'center',gap:'8px'},[span({fontSize:'9px',color:A()},`−${pb}% · ${t.d}d`),span({fontSize:'11px',color:A()},'↗')])]));
+    r.appendChild(div({display:'flex',gap:'20px'},[div({},[span({fontSize:'8px',color:MUT(),display:'block',marginBottom:'1px'},'YTD P&L'),span({fontSize:'12px',fontWeight:'600',color:R()},fmt(t.ytd))]),div({},[span({fontSize:'8px',color:MUT(),display:'block',marginBottom:'1px'},'30d Avg'),span({fontSize:'12px',color:DIM()},fmt(t.ma))])]));
     mb.appendChild(r);
   });
   mc.appendChild(mb);grid.appendChild(mc);
 
   // ── VAR ──
-  const vc2=div({background:'#101828',border:`1px solid ${BRD}`,borderRadius:'10px',padding:'12px 14px',display:'flex',flexDirection:'column',minHeight:'0'});
+  const vc2=div({background:CARD(),border:`1px solid ${BRD()}`,borderRadius:'10px',padding:'12px 14px',display:'flex',flexDirection:'column',minHeight:'0'});
   vc2.appendChild(secHdr('VAR ALERTS — ACTIVE TRADERS',A));
   const vg=div({display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px',flex:'1',minHeight:'0'});
   [{k:'hi',l:'HIGH >150%',i:'↑',c:R},{k:'lo',l:'LOW <50%',i:'↓',c:MUT}].forEach(side=>{
     const col=div({display:'flex',flexDirection:'column',gap:'5px'});
     col.appendChild(div({display:'flex',alignItems:'center',gap:'6px',marginBottom:'4px'},[span({fontSize:'8px',fontWeight:'700',color:side.c},`${side.i} ${side.l}`),tag(String(VARA[side.k].length),side.c)]));
-    VARA[side.k].forEach(t=>{const r=div({background:SUR,borderRadius:'7px',padding:'7px 10px',border:`1px solid ${BRD}`});r.appendChild(div({display:'flex',justifyContent:'space-between'},[span({fontSize:'13px',fontWeight:'700',color:TXT},t.n),span({fontSize:'11px',fontWeight:'700',color:side.c},`${Math.round(t.v/t.a*100)}%`)]));r.appendChild(span({fontSize:'9px',color:DIM,display:'block',marginTop:'2px'},`${fmt(t.v)} vs ${fmt(t.a)}`));col.appendChild(r);});
+    VARA[side.k].forEach(t=>{const r=div({background:SUR(),borderRadius:'7px',padding:'7px 10px',border:`1px solid ${BRD()}`});r.appendChild(div({display:'flex',justifyContent:'space-between'},[span({fontSize:'13px',fontWeight:'700',color:TXT()},t.n),span({fontSize:'11px',fontWeight:'700',color:side.c},`${Math.round(t.v/t.a*100)}%`)]));r.appendChild(span({fontSize:'9px',color:DIM(),display:'block',marginTop:'2px'},`${fmt(t.v)} vs ${fmt(t.a)}`));col.appendChild(r);});
     vg.appendChild(col);
   });
   vc2.appendChild(vg);grid.appendChild(vc2);
 
   // ── BLOCKED ──
-  const blkC=div({background:'#101828',border:`1px solid ${R}40`,borderRadius:'10px',padding:'12px 14px',display:'flex',flexDirection:'column',minHeight:'0'});
+  const blkC=div({background:CARD(),border:`1px solid ${R()}40`,borderRadius:'10px',padding:'12px 14px',display:'flex',flexDirection:'column',minHeight:'0'});
   blkC.appendChild(div({display:'flex',alignItems:'center',gap:'8px',flexShrink:'0',marginBottom:'10px'},[secHdr('BLOCKED CONTRACTS',R),tag(`${BLK.filter(c=>c.t.length).length} exposed`,R)]));
   BLK.forEach(c=>{
-    const r=div({background:SUR,borderRadius:'8px',padding:'9px 11px',border:`1px solid ${c.t.length?R+'40':BRD}`,marginBottom:'7px'});
-    r.appendChild(div({display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:c.t.length?'6px':'0'},[span({fontSize:'13px',fontWeight:'700',color:c.t.length?R:TXT},c.c),span({fontSize:'9px',color:DIM},`exp. ${c.e}`)]));
+    const r=div({background:SUR(),borderRadius:'8px',padding:'9px 11px',border:`1px solid ${c.t.length?R+'40':BRD}`,marginBottom:'7px'});
+    r.appendChild(div({display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:c.t.length?'6px':'0'},[span({fontSize:'13px',fontWeight:'700',color:c.t.length?R:TXT},c.c),span({fontSize:'9px',color:DIM()},`exp. ${c.e}`)]));
     if(c.t.length){const tw=div({display:'flex',gap:'5px'});c.t.forEach(t=>tw.appendChild(tag(t,R)));r.appendChild(tw);}
-    else r.appendChild(span({fontSize:'9px',color:MUT},'No exposed traders'));
+    else r.appendChild(span({fontSize:'9px',color:MUT()},'No exposed traders'));
     blkC.appendChild(r);
   });
   grid.appendChild(blkC);
