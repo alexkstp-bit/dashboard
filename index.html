@@ -4,280 +4,249 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Trading Floor Dashboard · Warsaw</title>
-<script src="https://unpkg.com/react@18.1.0/umd/react.development.js"></script>
-<script src="https://unpkg.com/react-dom@18.1.0/umd/react-dom.development.js"></script>
-<script src="https://unpkg.com/recharts@2.5.0/umd/Recharts.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#06090F;overflow:hidden;font-family:"SF Mono","Fira Code","Menlo",monospace}
+body{background:#06090F;color:#DCE8F8;font-family:"SF Mono","Fira Code","Menlo",monospace}
+#loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;color:#3D5068}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:#1A2840;border-radius:4px}
 button{font-family:inherit}
 </style>
 </head>
 <body>
+<div id="loading">Loading dashboard...</div>
 <div id="root"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/react@18.1.0/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18.1.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/recharts@2.5.0/umd/Recharts.js"></script>
+
 <script>
-const {createElement:h,useState,Fragment}=React;
-const {AreaChart,Area,LineChart,Line,XAxis,YAxis,Tooltip,ResponsiveContainer,ReferenceLine,CartesianGrid}=Recharts;
+window.addEventListener('load', function() {
+  try {
+    document.getElementById('loading').style.display = 'none';
 
-const C={bg:'#06090F',surface:'#0C1220',card:'#101828',border:'#182030',borderHi:'#1E2E48',green:'#00D97E',red:'#F04060',amber:'#F5A623',blue:'#4A9EFF',text:'#DCE8F8',muted:'#3D5068',dim:'#7A90A8',subtle:'#141E2E'};
+    const {createElement:h, useState, Fragment} = React;
+    const {AreaChart,Area,LineChart,Line,XAxis,YAxis,Tooltip,ResponsiveContainer,ReferenceLine,CartesianGrid} = Recharts;
 
-function makeDailyData(ytdFinal,daysBelow,seed){
-  const N=110,peakAt=N-daysBelow,peak=ytdFinal*(1.45+seed*0.08);
-  const cum=Array.from({length:N},(_,i)=>{
-    if(i<peakAt){const t=i/peakAt,noise=Math.sin(i*seed*1.3)*peak*0.04;return Math.round(peak*(t+noise/peak));}
-    else{const t=(i-peakAt)/daysBelow,noise=Math.sin(i*seed*0.9)*Math.abs(peak-ytdFinal)*0.02;return Math.round(peak+(ytdFinal-peak)*t+noise);}
-  });
-  cum[N-1]=ytdFinal;
-  const ml={0:'Jan',18:'Feb',37:'Mar',56:'Apr',74:'May',92:'Jun'};
-  return cum.map((pnl,i)=>{
-    const s=Math.max(0,i-29),sl=cum.slice(s,i+1),ma=Math.round(sl.reduce((a,b)=>a+b,0)/sl.length);
-    return{i,label:ml[i]||'',pnl,ma};
-  });
-}
+    const C={bg:'#06090F',surface:'#0C1220',card:'#101828',border:'#182030',borderHi:'#1E2E48',green:'#00D97E',red:'#F04060',amber:'#F5A623',blue:'#4A9EFF',text:'#DCE8F8',muted:'#3D5068',dim:'#7A90A8',subtle:'#141E2E'};
 
-const DAILY={LXD:makeDailyData(28400,8,1),MZC:makeDailyData(156000,14,2),NRP:makeDailyData(67300,5,3)};
+    function makeDailyData(ytdFinal,daysBelow,seed){
+      const N=110,peakAt=N-daysBelow,peak=ytdFinal*(1.45+seed*0.08);
+      const cum=Array.from({length:N},(_,i)=>{
+        if(i<peakAt){const t=i/peakAt,noise=Math.sin(i*seed*1.3)*peak*0.04;return Math.round(peak*(t+noise/peak));}
+        const t=(i-peakAt)/daysBelow,noise=Math.sin(i*seed*0.9)*Math.abs(peak-ytdFinal)*0.02;
+        return Math.round(peak+(ytdFinal-peak)*t+noise);
+      });
+      cum[N-1]=ytdFinal;
+      const ml={0:'Jan',18:'Feb',37:'Mar',56:'Apr',74:'May',92:'Jun'};
+      return cum.map((pnl,i)=>{
+        const s=Math.max(0,i-29),sl=cum.slice(s,i+1),ma=Math.round(sl.reduce((a,b)=>a+b,0)/sl.length);
+        return{i,label:ml[i]||'',pnl,ma};
+      });
+    }
 
-const pnlCurve=[{t:'08:00',p:0},{t:'09:00',p:142000},{t:'10:00',p:98000},{t:'11:00',p:370000},{t:'12:00',p:310000},{t:'13:00',p:540000},{t:'14:00',p:680000},{t:'15:00',p:790000},{t:'16:00',p:842000}];
+    const DAILY={LXD:makeDailyData(28400,8,1),MZC:makeDailyData(156000,14,2),NRP:makeDailyData(67300,5,3)};
+    const pnlCurve=[{t:'08:00',p:0},{t:'09:00',p:142000},{t:'10:00',p:98000},{t:'11:00',p:370000},{t:'12:00',p:310000},{t:'13:00',p:540000},{t:'14:00',p:680000},{t:'15:00',p:790000},{t:'16:00',p:842000}];
 
-const allProductsList=[
-  {name:'CL',pnl:312400,vol:18420},{name:'BRN',pnl:198700,vol:24310},{name:'SI',pnl:156200,vol:8640},
-  {name:'GO',pnl:134100,vol:31200},{name:'GC',pnl:89400,vol:5320},{name:'HO',pnl:41200,vol:7810},
-  {name:'RB',pnl:28700,vol:4320},{name:'PA',pnl:12400,vol:1230},{name:'PL',pnl:8900,vol:980},
-  {name:'NG',pnl:-9800,vol:2340},{name:'HE',pnl:-18400,vol:3150},{name:'LE',pnl:-32100,vol:4210},
-  {name:'LH',pnl:-41800,vol:5630},{name:'HO2',pnl:-54200,vol:9870},{name:'NG2',pnl:-78300,vol:12400},
-];
-const topP=[...allProductsList].sort((a,b)=>b.pnl-a.pnl).slice(0,5);
-const botP=[...allProductsList].sort((a,b)=>a.pnl-b.pnl).slice(0,5);
+    const allProd=[
+      {name:'CL',pnl:312400,vol:18420},{name:'BRN',pnl:198700,vol:24310},{name:'SI',pnl:156200,vol:8640},
+      {name:'GO',pnl:134100,vol:31200},{name:'GC',pnl:89400,vol:5320},{name:'HO',pnl:41200,vol:7810},
+      {name:'RB',pnl:28700,vol:4320},{name:'PA',pnl:12400,vol:1230},{name:'PL',pnl:8900,vol:980},
+      {name:'NG',pnl:-9800,vol:2340},{name:'HE',pnl:-18400,vol:3150},{name:'LE',pnl:-32100,vol:4210},
+      {name:'LH',pnl:-41800,vol:5630},{name:'HO2',pnl:-54200,vol:9870},{name:'NG2',pnl:-78300,vol:12400},
+    ];
+    const topP=[...allProd].sort((a,b)=>b.pnl-a.pnl).slice(0,5);
+    const botP=[...allProd].sort((a,b)=>a.pnl-b.pnl).slice(0,5);
 
-const allTradersList=[
-  {name:'ACE',pnl:198400,vol:24310,batch:'B2'},{name:'BRX',pnl:167200,vol:18420,batch:'B2'},
-  {name:'CYN',pnl:134500,vol:15670,batch:'B3'},{name:'DKL',pnl:98700,vol:12100,batch:'B2'},
-  {name:'EFT',pnl:87300,vol:9840,batch:'B3'},{name:'QBF',pnl:45600,vol:7890,batch:'B2'},
-  {name:'RSH',pnl:67800,vol:9120,batch:'B2'},{name:'MZC',pnl:34100,vol:4560,batch:'B2'},
-  {name:'OWV',pnl:23400,vol:5670,batch:'B3'},{name:'PYK',pnl:18700,vol:4320,batch:'B3'},
-  {name:'LXD',pnl:12400,vol:3210,batch:'B3'},{name:'NRP',pnl:9800,vol:2340,batch:'B4'},
-  {name:'KTB',pnl:-890,vol:1120,batch:'B4'},{name:'JVN',pnl:-1400,vol:2340,batch:'B4'},
-  {name:'HWP',pnl:-2900,vol:1870,batch:'B5'},{name:'GQM',pnl:-3800,vol:980,batch:'B5'},
-  {name:'FZR',pnl:-4200,vol:1240,batch:'B5'},
-];
-const topT=[...allTradersList].sort((a,b)=>b.pnl-a.pnl).slice(0,5);
-const botT=[...allTradersList].sort((a,b)=>a.pnl-b.pnl).slice(0,5);
+    const allTrd=[
+      {name:'ACE',pnl:198400,vol:24310,batch:'B2'},{name:'BRX',pnl:167200,vol:18420,batch:'B2'},
+      {name:'CYN',pnl:134500,vol:15670,batch:'B3'},{name:'DKL',pnl:98700,vol:12100,batch:'B2'},
+      {name:'EFT',pnl:87300,vol:9840,batch:'B3'},{name:'QBF',pnl:45600,vol:7890,batch:'B2'},
+      {name:'RSH',pnl:67800,vol:9120,batch:'B2'},{name:'MZC',pnl:34100,vol:4560,batch:'B2'},
+      {name:'OWV',pnl:23400,vol:5670,batch:'B3'},{name:'PYK',pnl:18700,vol:4320,batch:'B3'},
+      {name:'LXD',pnl:12400,vol:3210,batch:'B3'},{name:'NRP',pnl:9800,vol:2340,batch:'B4'},
+      {name:'KTB',pnl:-890,vol:1120,batch:'B4'},{name:'JVN',pnl:-1400,vol:2340,batch:'B4'},
+      {name:'HWP',pnl:-2900,vol:1870,batch:'B5'},{name:'GQM',pnl:-3800,vol:980,batch:'B5'},
+      {name:'FZR',pnl:-4200,vol:1240,batch:'B5'},
+    ];
+    const topT=[...allTrd].sort((a,b)=>b.pnl-a.pnl).slice(0,5);
+    const botT=[...allTrd].sort((a,b)=>a.pnl-b.pnl).slice(0,5);
 
-const nearHardStop=[{name:'FZR',loss:-4200,limit:-5000,mkt:'LE',batch:'B5'},{name:'GQM',loss:-3800,limit:-5000,mkt:'NG',batch:'B5'},{name:'HWP',loss:-2900,limit:-4000,mkt:'HO',batch:'B5'}];
-const belowMA=[{name:'LXD',ytd:28400,batch:'B3',days:8},{name:'MZC',ytd:156000,batch:'B2',days:14},{name:'NRP',ytd:67300,batch:'B4',days:5}].map(t=>({...t,ma:DAILY[t.name]?DAILY[t.name][DAILY[t.name].length-1].ma:0}));
-const varAlerts={high:[{name:'ACE',v:42000,avg:24000,batch:'B3'},{name:'EFT',v:31000,avg:18000,batch:'B4'}],low:[{name:'LXD',v:4200,avg:18000,batch:'B3'},{name:'OWV',v:3100,avg:14000,batch:'B2'},{name:'PYK',v:5800,avg:12000,batch:'B3'}]};
-const blocks=[{contract:'LE G27',expiry:'27-02-26',traders:['FZR','HWP']},{contract:'HE G27',expiry:'27-02-12',traders:['GQM']},{contract:'NG H27',expiry:'27-02-24',traders:[]}];
-const stats={total:17,green:11,red:3,amber:3};
+    const stops=[{name:'FZR',loss:-4200,limit:-5000,mkt:'LE',batch:'B5'},{name:'GQM',loss:-3800,limit:-5000,mkt:'NG',batch:'B5'},{name:'HWP',loss:-2900,limit:-4000,mkt:'HO',batch:'B5'}];
+    const bMA=[{name:'LXD',ytd:28400,batch:'B3',days:8},{name:'MZC',ytd:156000,batch:'B2',days:14},{name:'NRP',ytd:67300,batch:'B4',days:5}].map(t=>({...t,ma:DAILY[t.name][DAILY[t.name].length-1].ma}));
+    const varA={high:[{name:'ACE',v:42000,avg:24000},{name:'EFT',v:31000,avg:18000}],low:[{name:'LXD',v:4200,avg:18000},{name:'OWV',v:3100,avg:14000},{name:'PYK',v:5800,avg:12000}]};
+    const blk=[{contract:'LE G27',expiry:'27-02-26',traders:['FZR','HWP']},{contract:'HE G27',expiry:'27-02-12',traders:['GQM']},{contract:'NG H27',expiry:'27-02-24',traders:[]}];
+    const stats={total:17,green:11,red:3,amber:3};
 
-const fmt=n=>{const a=Math.abs(n),s=n<0?'−':'+';return a>=1e6?`${s}$${(a/1e6).toFixed(2)}M`:a>=1000?`${s}$${(a/1000).toFixed(0)}K`:`${s}$${a}`;};
-const fv=n=>n>=1000?`${(n/1000).toFixed(0)}K`:`${n}`;
-const gc=n=>n>=0?C.green:C.red;
-const d=(tag,props,...kids)=>h(tag,props,...kids);
+    const fmt=n=>{const a=Math.abs(n),s=n<0?'−':'+';return a>=1e6?`${s}$${(a/1e6).toFixed(2)}M`:a>=1000?`${s}$${(a/1000).toFixed(0)}K`:`${s}$${a}`;};
+    const fv=n=>n>=1000?`${(n/1000).toFixed(0)}K`:`${n}`;
+    const gc=n=>n>=0?C.green:C.red;
 
-function Card({children,style:s={},onClick}){return d('div',{onClick,style:{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:'12px 14px',cursor:onClick?'pointer':'default',display:'flex',flexDirection:'column',...s}},children);}
-function Tag({label,color:c=C.muted}){return d('span',{style:{background:`${c}20`,color:c,borderRadius:5,padding:'1px 7px',fontSize:9,fontWeight:700,whiteSpace:'nowrap'}},label);}
-function Tog({opts,val,set}){return d('div',{style:{display:'flex',background:C.surface,borderRadius:7,padding:2,gap:2}},opts.map(o=>d('button',{key:o,onClick:()=>set(o),style:{background:val===o?C.subtle:'transparent',color:val===o?C.text:C.muted,border:'none',borderRadius:5,padding:'3px 9px',fontSize:9,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}},o)));}
-function Hdr({txt,accent}){return d('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:10,flexShrink:0}},d('div',{style:{width:3,height:12,background:accent||C.blue,borderRadius:2}}),d('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.1em',color:C.muted}},txt));}
-function Bar({pct}){const c=pct>=90?C.red:pct>=70?C.amber:C.green;return d('div',{style:{display:'flex',flexDirection:'column',gap:3}},d('div',{style:{display:'flex',justifyContent:'space-between'}},d('span',{style:{fontSize:9,color:C.dim}},`${pct.toFixed(0)}% used`),d('span',{style:{fontSize:9,fontWeight:700,color:c}},pct>=90?'CRITICAL':pct>=70?'CAUTION':'—')),d('div',{style:{background:C.subtle,borderRadius:99,height:4}},d('div',{style:{width:`${Math.min(pct,100)}%`,background:c,borderRadius:99,height:4}})));}
+    const Card=({children,style:s={},onClick})=>h('div',{onClick,style:{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:'12px 14px',cursor:onClick?'pointer':'default',display:'flex',flexDirection:'column',...s}},children);
+    const Tag=({label,color:c=C.muted})=>h('span',{style:{background:`${c}20`,color:c,borderRadius:5,padding:'1px 7px',fontSize:9,fontWeight:700,whiteSpace:'nowrap'}},label);
+    const Tog=({opts,val,set})=>h('div',{style:{display:'flex',background:C.surface,borderRadius:7,padding:2,gap:2}},opts.map(o=>h('button',{key:o,onClick:()=>set(o),style:{background:val===o?C.subtle:'transparent',color:val===o?C.text:C.muted,border:'none',borderRadius:5,padding:'3px 9px',fontSize:9,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}},o)));
+    const Hdr=({txt,accent})=>h('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:10,flexShrink:0}},h('div',{style:{width:3,height:12,background:accent||C.blue,borderRadius:2}}),h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.1em',color:C.muted}},txt));
+    const Bar=({pct})=>{const c=pct>=90?C.red:pct>=70?C.amber:C.green;return h('div',{style:{display:'flex',flexDirection:'column',gap:3}},h('div',{style:{display:'flex',justifyContent:'space-between'}},h('span',{style:{fontSize:9,color:C.dim}},`${pct.toFixed(0)}% used`),h('span',{style:{fontSize:9,fontWeight:700,color:c}},pct>=90?'CRITICAL':pct>=70?'CAUTION':'—')),h('div',{style:{background:C.subtle,borderRadius:99,height:4}},h('div',{style:{width:`${Math.min(pct,100)}%`,background:c,borderRadius:99,height:4}})));};
+    const MonthTick=({x,y,payload})=>payload.value?h('text',{x,y:y+12,textAnchor:'middle',fill:C.muted,fontSize:10},payload.value):null;
 
-function MonthTick({x,y,payload}){if(!payload.value)return null;return d('text',{x,y:y+12,textAnchor:'middle',fill:C.muted,fontSize:10},payload.value);}
-
-function PnLModal({close}){
-  return d('div',{onClick:close,style:{position:'fixed',inset:0,background:'rgba(0,0,0,0.9)',zIndex:200,display:'flex',alignItems:'center',justifyContent:'center'}},
-    d('div',{onClick:e=>e.stopPropagation(),style:{background:C.card,border:`1px solid ${C.borderHi}`,borderRadius:14,padding:28,width:'80%',maxWidth:800}},
-      d('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20}},
-        d('div',null,d('div',{style:{fontSize:9,color:C.muted,letterSpacing:'0.1em',marginBottom:4}},'DESK P&L — INTRADAY'),d('div',{style:{fontSize:34,fontWeight:700,color:C.green}},'+$842,000'),d('div',{style:{fontSize:10,color:C.dim,marginTop:2}},'vs +$620K yesterday · 142,840 lots')),
-        d('button',{onClick:close,style:{background:C.subtle,border:'none',color:C.dim,borderRadius:7,padding:'6px 14px',cursor:'pointer',fontSize:11}},'✕ Close')
-      ),
-      d(ResponsiveContainer,{width:'100%',height:240},
-        d(AreaChart,{data:pnlCurve,margin:{top:8,right:8,left:20,bottom:0}},
-          d('defs',null,d('linearGradient',{id:'mg',x1:'0',y1:'0',x2:'0',y2:'1'},d('stop',{offset:'5%',stopColor:C.green,stopOpacity:0.25}),d('stop',{offset:'95%',stopColor:C.green,stopOpacity:0}))),
-          d(CartesianGrid,{stroke:C.border,strokeDasharray:'3 3'}),
-          d(XAxis,{dataKey:'t',tick:{fill:C.muted,fontSize:10},axisLine:false,tickLine:false}),
-          d(YAxis,{tickFormatter:v=>fmt(v),tick:{fill:C.muted,fontSize:10},axisLine:false,tickLine:false}),
-          d(Tooltip,{contentStyle:{background:C.surface,border:`1px solid ${C.borderHi}`,borderRadius:8,fontSize:11},labelStyle:{color:C.dim},formatter:v=>[fmt(v),'P&L']}),
-          d(ReferenceLine,{y:0,stroke:C.muted,strokeDasharray:'3 3'}),
-          d(Area,{type:'monotone',dataKey:'p',stroke:C.green,strokeWidth:2,fill:'url(#mg)',dot:false,activeDot:{r:4,fill:C.green}})
-        )
-      )
-    )
-  );
-}
-
-function TraderChartModal({trader,close}){
-  if(!trader)return null;
-  const data=DAILY[trader.name]||[];
-  const last=data.length>0?data[data.length-1]:{pnl:0,ma:0};
-  const pctBelow=last.ma>0?((last.ma-last.pnl)/last.ma*100).toFixed(0):0;
-  return d('div',{onClick:close,style:{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:200,display:'flex',alignItems:'center',justifyContent:'center'}},
-    d('div',{onClick:e=>e.stopPropagation(),style:{background:C.card,border:`1px solid ${C.borderHi}`,borderRadius:14,padding:28,width:'82%',maxWidth:860}},
-      d('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20}},
-        d('div',null,
-          d('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:8}},d('span',{style:{fontSize:26,fontWeight:700,color:C.text}},trader.name),d(Tag,{label:trader.batch,color:C.muted}),d(Tag,{label:`−${pctBelow}% vs 30d avg`,color:C.amber}),d(Tag,{label:`${trader.days}d below`,color:C.amber})),
-          d('div',{style:{display:'flex',gap:28}},
-            d('div',null,d('div',{style:{fontSize:9,color:C.muted,marginBottom:2}},'YTD P&L'),d('div',{style:{fontSize:20,fontWeight:700,color:C.red}},fmt(last.pnl))),
-            d('div',null,d('div',{style:{fontSize:9,color:C.muted,marginBottom:2}},'30-Day Moving Avg'),d('div',{style:{fontSize:20,fontWeight:700,color:C.amber}},fmt(last.ma))),
-            d('div',null,d('div',{style:{fontSize:9,color:C.muted,marginBottom:2}},'Days Below'),d('div',{style:{fontSize:20,fontWeight:700,color:C.amber}},trader.days))
-          )
-        ),
-        d('button',{onClick:close,style:{background:C.subtle,border:'none',color:C.dim,borderRadius:7,padding:'6px 14px',cursor:'pointer',fontSize:11}},'✕ Close')
-      ),
-      d('div',{style:{display:'flex',gap:20,marginBottom:14}},
-        d('div',{style:{display:'flex',alignItems:'center',gap:7}},d('div',{style:{width:20,height:2,background:C.blue,borderRadius:1}}),d('span',{style:{fontSize:10,color:C.dim}},'Daily cumulative P&L')),
-        d('div',{style:{display:'flex',alignItems:'center',gap:7}},d('div',{style:{width:20,borderTop:`2px dashed ${C.amber}`}}),d('span',{style:{fontSize:10,color:C.dim}},'30-day moving average'))
-      ),
-      d(ResponsiveContainer,{width:'100%',height:248},
-        d(LineChart,{data,margin:{top:4,right:8,left:24,bottom:4}},
-          d(CartesianGrid,{stroke:C.border,strokeDasharray:'3 3',vertical:false}),
-          d(XAxis,{dataKey:'label',tick:h(MonthTick,{}),axisLine:false,tickLine:false,interval:0}),
-          d(YAxis,{tickFormatter:v=>fmt(v),tick:{fill:C.muted,fontSize:10},axisLine:false,tickLine:false}),
-          d(Tooltip,{contentStyle:{background:C.surface,border:`1px solid ${C.borderHi}`,borderRadius:8,fontSize:11},labelFormatter:(_,pl)=>pl&&pl.length>0?`Day ${pl[0].payload.i+1}`:'',formatter:(v,name)=>[fmt(v),name==='pnl'?'P&L':'30d MA']}),
-          d(ReferenceLine,{y:0,stroke:C.muted,strokeDasharray:'3 3'}),
-          d(Line,{type:'monotone',dataKey:'ma',stroke:C.amber,strokeWidth:1.5,strokeDasharray:'5 3',dot:false,activeDot:false}),
-          d(Line,{type:'monotone',dataKey:'pnl',stroke:C.blue,strokeWidth:2,dot:false,activeDot:{r:4,fill:C.blue}})
-        )
-      ),
-      d('div',{style:{fontSize:9,color:C.muted,marginTop:10,textAlign:'right'}},`Jan–Jun 2026 · ${data.length} trading days`)
-    )
-  );
-}
-
-function Dashboard(){
-  const [modal,setModal]=useState(false);
-  const [traderModal,setTraderModal]=useState(null);
-  const [pv,setPv]=useState('Top 5');
-  const [tv,setTv]=useState('Top 5');
-  const prods=pv==='Top 5'?topP:pv==='Btm 5'?botP:allProductsList;
-  const trdrs=tv==='Top 5'?topT:tv==='Btm 5'?botT:[...allTradersList].sort((a,b)=>b.pnl-a.pnl);
-  const now=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-  const today=new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
-
-  return d('div',{style:{background:C.bg,height:'100vh',width:'100vw',display:'flex',flexDirection:'column',color:C.text,padding:'8px 12px',boxSizing:'border-box',gap:7,overflow:'hidden'}},
-
-    // TOPBAR
-    d('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0}},
-      d('div',{style:{display:'flex',alignItems:'center',gap:8}},d('div',{style:{width:7,height:7,borderRadius:'50%',background:C.green,boxShadow:`0 0 8px ${C.green}`}}),d('span',{style:{fontSize:10,color:C.muted,letterSpacing:'0.12em'}},'TRADING FLOOR · WARSAW')),
-      d('span',{style:{fontSize:10,color:C.muted}},`${today} · ${now} CET`)
-    ),
-
-    // METRIC STRIP
-    d('div',{style:{display:'grid',gridTemplateColumns:'2.2fr 1fr 1fr',gap:7,flexShrink:0}},
-      d(Card,{onClick:()=>setModal(true),style:{flexDirection:'row',alignItems:'center',gap:14,borderColor:C.borderHi}},
-        d('div',{style:{minWidth:130}},d('div',{style:{fontSize:9,color:C.muted,letterSpacing:'0.1em',marginBottom:3}},'DESK P&L TODAY'),d('div',{style:{fontSize:28,fontWeight:700,color:C.green,letterSpacing:'-0.02em'}},'+$842K'),d('div',{style:{fontSize:9,color:C.dim,marginTop:2}},'vs +$620K yesterday')),
-        d('div',{style:{flex:1,height:42}},d(ResponsiveContainer,{width:'100%',height:'100%'},d(AreaChart,{data:pnlCurve},d('defs',null,d('linearGradient',{id:'sk',x1:'0',y1:'0',x2:'0',y2:'1'},d('stop',{offset:'5%',stopColor:C.green,stopOpacity:0.4}),d('stop',{offset:'95%',stopColor:C.green,stopOpacity:0}))),d(Area,{type:'monotone',dataKey:'p',stroke:C.green,strokeWidth:1.5,fill:'url(#sk)',dot:false})))),
-        d('div',{style:{fontSize:8,color:C.blue,letterSpacing:'0.08em'}},'↗ EXPAND')
-      ),
-      d(Card,{},d('div',{style:{fontSize:9,color:C.muted,letterSpacing:'0.1em',marginBottom:8}},'TRADERS TODAY'),d('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'6px 0',flex:1}},[{label:'Profitable',val:stats.green,c:C.green},{label:'At Loss',val:stats.red,c:C.red},{label:'Near Stop',val:stats.amber,c:C.amber},{label:'Active',val:stats.total,c:C.dim}].map(x=>d('div',{key:x.label},d('div',{style:{fontSize:8,color:C.muted,marginBottom:1}},x.label),d('div',{style:{fontSize:20,fontWeight:700,color:x.c,lineHeight:1.1}},x.val))))),
-      d(Card,{},d('div',{style:{fontSize:9,color:C.muted,letterSpacing:'0.1em',marginBottom:3}},'VOLUME TODAY'),d('div',{style:{fontSize:28,fontWeight:700,color:C.text}},'142,840'),d('div',{style:{fontSize:9,color:C.dim,marginTop:2}},'lots traded'))
-    ),
-
-    // MAIN GRID
-    d('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gridTemplateRows:'1fr 1fr 1fr',gap:7,flex:1,minHeight:0}},
-
-      // PRODUCTS
-      d(Card,{style:{minHeight:0}},
-        d('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0,marginBottom:10}},d(Hdr,{txt:'PRODUCTS',accent:C.blue}),d(Tog,{opts:['Top 5','Btm 5','All'],val:pv,set:setPv})),
-        d('div',{style:{overflowY:'auto',flex:1}},d('div',{style:{display:'grid',gridTemplateColumns:'44px 1fr 52px',gap:'6px 0',alignContent:'start'}},
-          ['','P&L','LOTS'].map((hh,i)=>d('span',{key:i,style:{fontSize:8,color:C.muted,letterSpacing:'0.08em',textAlign:i>0?'right':'left',paddingRight:i===1?8:0}},hh)),
-          prods.flatMap((p,i)=>[
-            d('span',{key:`n${i}`,style:{fontSize:pv==='All'?12:14,fontWeight:700,color:C.text}},p.name),
-            d('span',{key:`p${i}`,style:{fontSize:pv==='All'?11:12,fontWeight:700,color:gc(p.pnl),textAlign:'right',paddingRight:8}},fmt(p.pnl)),
-            d('span',{key:`v${i}`,style:{fontSize:10,color:C.dim,textAlign:'right'}},fv(p.vol))
-          ])
-        ))
-      ),
-
-      // TRADERS
-      d(Card,{style:{minHeight:0}},
-        d('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0,marginBottom:10}},d(Hdr,{txt:'TRADERS',accent:C.blue}),d(Tog,{opts:['Top 5','Btm 5','All'],val:tv,set:setTv})),
-        d('div',{style:{overflowY:'auto',flex:1}},d('div',{style:{display:'grid',gridTemplateColumns:'40px 34px 1fr 52px',gap:'6px 0',alignContent:'start'}},
-          ['','','P&L','LOTS'].map((hh,i)=>d('span',{key:i,style:{fontSize:8,color:C.muted,letterSpacing:'0.08em',textAlign:i>=2?'right':'left',paddingRight:i===2?8:0}},hh)),
-          trdrs.flatMap((t,i)=>[
-            d('span',{key:`n${i}`,style:{fontSize:tv==='All'?12:13,fontWeight:700,color:C.text}},t.name),
-            d('span',{key:`b${i}`,style:{fontSize:9,color:C.muted,background:C.subtle,borderRadius:4,padding:'1px 4px',alignSelf:'center',textAlign:'center'}},t.batch),
-            d('span',{key:`p${i}`,style:{fontSize:tv==='All'?11:12,fontWeight:700,color:gc(t.pnl),textAlign:'right',paddingRight:8}},fmt(t.pnl)),
-            d('span',{key:`v${i}`,style:{fontSize:10,color:C.dim,textAlign:'right'}},fv(t.vol))
-          ])
-        ))
-      ),
-
-      // HARD STOP
-      d(Card,{style:{minHeight:0,borderColor:nearHardStop.length?`${C.red}40`:C.border}},
-        d('div',{style:{display:'flex',alignItems:'center',gap:8,flexShrink:0,marginBottom:10}},d(Hdr,{txt:'NEAR HARD STOP',accent:C.red}),d(Tag,{label:nearHardStop.length,color:C.red})),
-        d('div',{style:{display:'flex',flexDirection:'column',gap:7,flex:1,overflowY:'auto'}},
-          nearHardStop.map((t,i)=>{
-            const pct=Math.abs(t.loss)/Math.abs(t.limit)*100;
-            return d('div',{key:i,style:{background:C.surface,borderRadius:8,padding:'9px 11px',border:`1px solid ${pct>=90?`${C.red}40`:C.border}`}},
-              d('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:6}},d('div',{style:{display:'flex',alignItems:'center',gap:7}},d('span',{style:{fontSize:14,fontWeight:700,color:C.text}},t.name),d(Tag,{label:t.batch,color:C.muted})),d('span',{style:{fontSize:14,fontWeight:700,color:C.red}},fmt(t.loss))),
-              d(Bar,{pct}),
-              d('div',{style:{fontSize:9,color:C.muted,marginTop:5}},`Limit: ${fmt(t.limit)}  ·  Primary: `,d('span',{style:{color:C.amber,fontWeight:700}},t.mkt))
-            );
-          })
-        )
-      ),
-
-      // BELOW MA
-      d(Card,{style:{minHeight:0,borderColor:`${C.amber}40`}},
-        d('div',{style:{display:'flex',alignItems:'center',gap:8,flexShrink:0,marginBottom:6}},d(Hdr,{txt:'P&L BELOW 30-DAY AVG',accent:C.amber}),d(Tag,{label:belowMA.length,color:C.amber})),
-        d('div',{style:{fontSize:8,color:C.muted,marginBottom:8,flexShrink:0}},'↗ Click trader to view YTD chart'),
-        d('div',{style:{display:'flex',flexDirection:'column',gap:7,flex:1,overflowY:'auto'}},
-          belowMA.map((t,i)=>{
-            const pb=t.ma>0?((t.ma-t.ytd)/t.ma*100).toFixed(0):0;
-            return d('div',{key:i,onClick:()=>setTraderModal(t),style:{background:C.surface,borderRadius:8,padding:'9px 11px',border:`1px solid ${C.border}`,cursor:'pointer'},
-              onMouseEnter:e=>e.currentTarget.style.borderColor=`${C.amber}60`,
-              onMouseLeave:e=>e.currentTarget.style.borderColor=C.border},
-              d('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}},
-                d('div',{style:{display:'flex',alignItems:'center',gap:7}},d('span',{style:{fontSize:14,fontWeight:700,color:C.text}},t.name),d(Tag,{label:t.batch,color:C.muted})),
-                d('div',{style:{display:'flex',alignItems:'center',gap:8}},d('span',{style:{fontSize:9,color:C.amber}},`−${pb}% · ${t.days}d`),d('span',{style:{fontSize:11,color:C.amber}},'↗'))
-              ),
-              d('div',{style:{display:'flex',gap:20}},
-                d('div',null,d('div',{style:{fontSize:8,color:C.muted,marginBottom:1}},'YTD P&L'),d('div',{style:{fontSize:12,fontWeight:600,color:C.red}},fmt(t.ytd))),
-                d('div',null,d('div',{style:{fontSize:8,color:C.muted,marginBottom:1}},'30d Avg'),d('div',{style:{fontSize:12,color:C.dim}},fmt(t.ma)))
-              )
-            );
-          })
-        )
-      ),
-
-      // VAR
-      d(Card,{style:{minHeight:0}},
-        d(Hdr,{txt:'VAR ALERTS — ACTIVE TRADERS',accent:C.amber}),
-        d('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,flex:1,minHeight:0}},
-          [{key:'high',label:'HIGH >150%',icon:'↑',c:C.red},{key:'low',label:'LOW <50%',icon:'↓',c:C.muted}].map(side=>
-            d('div',{key:side.key,style:{display:'flex',flexDirection:'column',gap:5}},
-              d('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:4}},d('span',{style:{fontSize:8,fontWeight:700,color:side.c,letterSpacing:'0.08em'}},`${side.icon} ${side.label}`),d(Tag,{label:varAlerts[side.key].length,color:side.c})),
-              varAlerts[side.key].map((t,i)=>{
-                const pct=(t.v/t.avg*100).toFixed(0);
-                return d('div',{key:i,style:{background:C.surface,borderRadius:7,padding:'7px 10px',border:`1px solid ${C.border}`}},
-                  d('div',{style:{display:'flex',justifyContent:'space-between'}},d('span',{style:{fontSize:13,fontWeight:700,color:C.text}},t.name),d('span',{style:{fontSize:11,fontWeight:700,color:side.c}},`${pct}%`)),
-                  d('div',{style:{fontSize:9,color:C.dim,marginTop:2}},`${fmt(t.v)} vs ${fmt(t.avg)}`)
-                );
-              })
+    function PnLModal({close}){
+      return h('div',{onClick:close,style:{position:'fixed',inset:0,background:'rgba(0,0,0,0.9)',zIndex:200,display:'flex',alignItems:'center',justifyContent:'center'}},
+        h('div',{onClick:e=>e.stopPropagation(),style:{background:C.card,border:`1px solid ${C.borderHi}`,borderRadius:14,padding:28,width:'80%',maxWidth:800}},
+          h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20}},
+            h('div',null,h('div',{style:{fontSize:9,color:C.muted,letterSpacing:'0.1em',marginBottom:4}},'DESK P&L — INTRADAY'),h('div',{style:{fontSize:34,fontWeight:700,color:C.green}},'+$842,000'),h('div',{style:{fontSize:10,color:C.dim,marginTop:2}},'vs +$620K yesterday · 142,840 lots')),
+            h('button',{onClick:close,style:{background:C.subtle,border:'none',color:C.dim,borderRadius:7,padding:'6px 14px',cursor:'pointer',fontSize:11}},'✕ Close')
+          ),
+          h(ResponsiveContainer,{width:'100%',height:240},
+            h(AreaChart,{data:pnlCurve,margin:{top:8,right:8,left:20,bottom:0}},
+              h('defs',null,h('linearGradient',{id:'mg',x1:'0',y1:'0',x2:'0',y2:'1'},h('stop',{offset:'5%',stopColor:C.green,stopOpacity:0.25}),h('stop',{offset:'95%',stopColor:C.green,stopOpacity:0}))),
+              h(CartesianGrid,{stroke:C.border,strokeDasharray:'3 3'}),
+              h(XAxis,{dataKey:'t',tick:{fill:C.muted,fontSize:10},axisLine:false,tickLine:false}),
+              h(YAxis,{tickFormatter:v=>fmt(v),tick:{fill:C.muted,fontSize:10},axisLine:false,tickLine:false}),
+              h(Tooltip,{contentStyle:{background:C.surface,border:`1px solid ${C.borderHi}`,borderRadius:8,fontSize:11},formatter:v=>[fmt(v),'P&L']}),
+              h(ReferenceLine,{y:0,stroke:C.muted,strokeDasharray:'3 3'}),
+              h(Area,{type:'monotone',dataKey:'p',stroke:C.green,strokeWidth:2,fill:'url(#mg)',dot:false})
             )
           )
         )
-      ),
+      );
+    }
 
-      // BLOCKED
-      d(Card,{style:{minHeight:0,borderColor:`${C.red}40`}},
-        d('div',{style:{display:'flex',alignItems:'center',gap:8,flexShrink:0,marginBottom:10}},d(Hdr,{txt:'BLOCKED CONTRACTS',accent:C.red}),d(Tag,{label:`${blocks.filter(c=>c.traders.length).length} exposed`,color:C.red})),
-        d('div',{style:{display:'flex',flexDirection:'column',gap:7,flex:1}},
-          blocks.map((c,i)=>d('div',{key:i,style:{background:C.surface,borderRadius:8,padding:'9px 11px',border:`1px solid ${c.traders.length?`${C.red}40`:C.border}`}},
-            d('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:c.traders.length?6:0}},d('span',{style:{fontSize:13,fontWeight:700,color:c.traders.length?C.red:C.text}},c.contract),d('span',{style:{fontSize:9,color:C.dim}},`exp. ${c.expiry}`)),
-            c.traders.length?d('div',{style:{display:'flex',gap:5,flexWrap:'wrap'}},c.traders.map((t,j)=>d(Tag,{key:j,label:t,color:C.red}))):d('div',{style:{fontSize:9,color:C.muted}},'No exposed traders')
-          ))
+    function TraderModal({trader,close}){
+      if(!trader)return null;
+      const data=DAILY[trader.name]||[];
+      const last=data[data.length-1]||{pnl:0,ma:0};
+      const pb=last.ma>0?((last.ma-last.pnl)/last.ma*100).toFixed(0):0;
+      return h('div',{onClick:close,style:{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:200,display:'flex',alignItems:'center',justifyContent:'center'}},
+        h('div',{onClick:e=>e.stopPropagation(),style:{background:C.card,border:`1px solid ${C.borderHi}`,borderRadius:14,padding:28,width:'82%',maxWidth:860}},
+          h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20}},
+            h('div',null,
+              h('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:8}},h('span',{style:{fontSize:26,fontWeight:700,color:C.text}},trader.name),h(Tag,{label:trader.batch,color:C.muted}),h(Tag,{label:`−${pb}% vs 30d avg`,color:C.amber}),h(Tag,{label:`${trader.days}d below`,color:C.amber})),
+              h('div',{style:{display:'flex',gap:28}},
+                h('div',null,h('div',{style:{fontSize:9,color:C.muted,marginBottom:2}},'YTD P&L'),h('div',{style:{fontSize:20,fontWeight:700,color:C.red}},fmt(last.pnl))),
+                h('div',null,h('div',{style:{fontSize:9,color:C.muted,marginBottom:2}},'30-Day Avg'),h('div',{style:{fontSize:20,fontWeight:700,color:C.amber}},fmt(last.ma))),
+                h('div',null,h('div',{style:{fontSize:9,color:C.muted,marginBottom:2}},'Days Below'),h('div',{style:{fontSize:20,fontWeight:700,color:C.amber}},trader.days))
+              )
+            ),
+            h('button',{onClick:close,style:{background:C.subtle,border:'none',color:C.dim,borderRadius:7,padding:'6px 14px',cursor:'pointer',fontSize:11}},'✕ Close')
+          ),
+          h('div',{style:{display:'flex',gap:20,marginBottom:14}},
+            h('div',{style:{display:'flex',alignItems:'center',gap:7}},h('div',{style:{width:20,height:2,background:C.blue,borderRadius:1}}),h('span',{style:{fontSize:10,color:C.dim}},'Daily cumulative P&L')),
+            h('div',{style:{display:'flex',alignItems:'center',gap:7}},h('div',{style:{width:20,borderTop:`2px dashed ${C.amber}`}}),h('span',{style:{fontSize:10,color:C.dim}},'30-day moving average'))
+          ),
+          h(ResponsiveContainer,{width:'100%',height:248},
+            h(LineChart,{data,margin:{top:4,right:8,left:24,bottom:4}},
+              h(CartesianGrid,{stroke:C.border,strokeDasharray:'3 3',vertical:false}),
+              h(XAxis,{dataKey:'label',tick:h(MonthTick,{}),axisLine:false,tickLine:false,interval:0}),
+              h(YAxis,{tickFormatter:v=>fmt(v),tick:{fill:C.muted,fontSize:10},axisLine:false,tickLine:false}),
+              h(Tooltip,{contentStyle:{background:C.surface,border:`1px solid ${C.borderHi}`,borderRadius:8,fontSize:11},labelFormatter:(_,pl)=>pl&&pl.length?`Day ${pl[0].payload.i+1}`:'',formatter:(v,n)=>[fmt(v),n==='pnl'?'P&L':'30d MA']}),
+              h(ReferenceLine,{y:0,stroke:C.muted,strokeDasharray:'3 3'}),
+              h(Line,{type:'monotone',dataKey:'ma',stroke:C.amber,strokeWidth:1.5,strokeDasharray:'5 3',dot:false,activeDot:false}),
+              h(Line,{type:'monotone',dataKey:'pnl',stroke:C.blue,strokeWidth:2,dot:false,activeDot:{r:4,fill:C.blue}})
+            )
+          )
         )
-      )
-    ),
+      );
+    }
 
-    modal&&d(PnLModal,{close:()=>setModal(false)}),
-    traderModal&&d(TraderChartModal,{trader:traderModal,close:()=>setTraderModal(null)})
-  );
-}
+    function Dashboard(){
+      const [modal,setModal]=useState(false);
+      const [tModal,setTModal]=useState(null);
+      const [pv,setPv]=useState('Top 5');
+      const [tv,setTv]=useState('Top 5');
+      const prods=pv==='Top 5'?topP:pv==='Btm 5'?botP:allProd;
+      const trdrs=tv==='Top 5'?topT:tv==='Btm 5'?botT:[...allTrd].sort((a,b)=>b.pnl-a.pnl);
+      const now=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+      const today=new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
 
-ReactDOM.createRoot(document.getElementById('root')).render(h(Dashboard,null));
+      return h('div',{style:{background:C.bg,height:'100vh',width:'100vw',display:'flex',flexDirection:'column',color:C.text,padding:'8px 12px',boxSizing:'border-box',gap:7,overflow:'hidden'}},
+
+        h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0}},
+          h('div',{style:{display:'flex',alignItems:'center',gap:8}},h('div',{style:{width:7,height:7,borderRadius:'50%',background:C.green,boxShadow:`0 0 8px ${C.green}`}}),h('span',{style:{fontSize:10,color:C.muted,letterSpacing:'0.12em'}},'TRADING FLOOR · WARSAW')),
+          h('span',{style:{fontSize:10,color:C.muted}},`${today} · ${now} CET`)
+        ),
+
+        h('div',{style:{display:'grid',gridTemplateColumns:'2.2fr 1fr 1fr',gap:7,flexShrink:0}},
+          h(Card,{onClick:()=>setModal(true),style:{flexDirection:'row',alignItems:'center',gap:14,borderColor:C.borderHi}},
+            h('div',{style:{minWidth:130}},h('div',{style:{fontSize:9,color:C.muted,letterSpacing:'0.1em',marginBottom:3}},'DESK P&L TODAY'),h('div',{style:{fontSize:28,fontWeight:700,color:C.green}},'+$842K'),h('div',{style:{fontSize:9,color:C.dim,marginTop:2}},'vs +$620K yesterday')),
+            h('div',{style:{flex:1,height:42}},h(ResponsiveContainer,{width:'100%',height:'100%'},h(AreaChart,{data:pnlCurve},h('defs',null,h('linearGradient',{id:'sk',x1:'0',y1:'0',x2:'0',y2:'1'},h('stop',{offset:'5%',stopColor:C.green,stopOpacity:0.4}),h('stop',{offset:'95%',stopColor:C.green,stopOpacity:0}))),h(Area,{type:'monotone',dataKey:'p',stroke:C.green,strokeWidth:1.5,fill:'url(#sk)',dot:false})))),
+            h('div',{style:{fontSize:8,color:C.blue}},'↗ EXPAND')
+          ),
+          h(Card,{},h('div',{style:{fontSize:9,color:C.muted,letterSpacing:'0.1em',marginBottom:8}},'TRADERS TODAY'),h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'6px 0',flex:1}},[{l:'Profitable',v:stats.green,c:C.green},{l:'At Loss',v:stats.red,c:C.red},{l:'Near Stop',v:stats.amber,c:C.amber},{l:'Active',v:stats.total,c:C.dim}].map(x=>h('div',{key:x.l},h('div',{style:{fontSize:8,color:C.muted,marginBottom:1}},x.l),h('div',{style:{fontSize:20,fontWeight:700,color:x.c,lineHeight:1.1}},x.v))))),
+          h(Card,{},h('div',{style:{fontSize:9,color:C.muted,letterSpacing:'0.1em',marginBottom:3}},'VOLUME TODAY'),h('div',{style:{fontSize:28,fontWeight:700,color:C.text}},'142,840'),h('div',{style:{fontSize:9,color:C.dim,marginTop:2}},'lots traded'))
+        ),
+
+        h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gridTemplateRows:'1fr 1fr 1fr',gap:7,flex:1,minHeight:0}},
+
+          h(Card,{style:{minHeight:0}},
+            h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0,marginBottom:10}},h(Hdr,{txt:'PRODUCTS',accent:C.blue}),h(Tog,{opts:['Top 5','Btm 5','All'],val:pv,set:setPv})),
+            h('div',{style:{overflowY:'auto',flex:1}},h('div',{style:{display:'grid',gridTemplateColumns:'44px 1fr 52px',gap:'6px 0',alignContent:'start'}},
+              ['','P&L','LOTS'].map((hh,i)=>h('span',{key:i,style:{fontSize:8,color:C.muted,textAlign:i>0?'right':'left',paddingRight:i===1?8:0}},hh)),
+              prods.flatMap((p,i)=>[h('span',{key:`n${i}`,style:{fontSize:pv==='All'?12:14,fontWeight:700,color:C.text}},p.name),h('span',{key:`p${i}`,style:{fontSize:12,fontWeight:700,color:gc(p.pnl),textAlign:'right',paddingRight:8}},fmt(p.pnl)),h('span',{key:`v${i}`,style:{fontSize:10,color:C.dim,textAlign:'right'}},fv(p.vol))])
+            ))
+          ),
+
+          h(Card,{style:{minHeight:0}},
+            h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0,marginBottom:10}},h(Hdr,{txt:'TRADERS',accent:C.blue}),h(Tog,{opts:['Top 5','Btm 5','All'],val:tv,set:setTv})),
+            h('div',{style:{overflowY:'auto',flex:1}},h('div',{style:{display:'grid',gridTemplateColumns:'40px 34px 1fr 52px',gap:'6px 0',alignContent:'start'}},
+              ['','','P&L','LOTS'].map((hh,i)=>h('span',{key:i,style:{fontSize:8,color:C.muted,textAlign:i>=2?'right':'left',paddingRight:i===2?8:0}},hh)),
+              trdrs.flatMap((t,i)=>[h('span',{key:`n${i}`,style:{fontSize:tv==='All'?12:13,fontWeight:700,color:C.text}},t.name),h('span',{key:`b${i}`,style:{fontSize:9,color:C.muted,background:C.subtle,borderRadius:4,padding:'1px 4px',alignSelf:'center',textAlign:'center'}},t.batch),h('span',{key:`p${i}`,style:{fontSize:12,fontWeight:700,color:gc(t.pnl),textAlign:'right',paddingRight:8}},fmt(t.pnl)),h('span',{key:`v${i}`,style:{fontSize:10,color:C.dim,textAlign:'right'}},fv(t.vol))])
+            ))
+          ),
+
+          h(Card,{style:{minHeight:0,borderColor:stops.length?`${C.red}40`:C.border}},
+            h('div',{style:{display:'flex',alignItems:'center',gap:8,flexShrink:0,marginBottom:10}},h(Hdr,{txt:'NEAR HARD STOP',accent:C.red}),h(Tag,{label:stops.length,color:C.red})),
+            h('div',{style:{display:'flex',flexDirection:'column',gap:7,flex:1,overflowY:'auto'}},
+              stops.map((t,i)=>{const pct=Math.abs(t.loss)/Math.abs(t.limit)*100;return h('div',{key:i,style:{background:C.surface,borderRadius:8,padding:'9px 11px',border:`1px solid ${pct>=90?`${C.red}40`:C.border}`}},h('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:6}},h('div',{style:{display:'flex',alignItems:'center',gap:7}},h('span',{style:{fontSize:14,fontWeight:700,color:C.text}},t.name),h(Tag,{label:t.batch,color:C.muted})),h('span',{style:{fontSize:14,fontWeight:700,color:C.red}},fmt(t.loss))),h(Bar,{pct}),h('div',{style:{fontSize:9,color:C.muted,marginTop:5}},`Limit: ${fmt(t.limit)}  ·  Primary: `,h('span',{style:{color:C.amber,fontWeight:700}},t.mkt)));})
+            )
+          ),
+
+          h(Card,{style:{minHeight:0,borderColor:`${C.amber}40`}},
+            h('div',{style:{display:'flex',alignItems:'center',gap:8,flexShrink:0,marginBottom:6}},h(Hdr,{txt:'P&L BELOW 30-DAY AVG',accent:C.amber}),h(Tag,{label:bMA.length,color:C.amber})),
+            h('div',{style:{fontSize:8,color:C.muted,marginBottom:8,flexShrink:0}},'↗ Click trader to view YTD chart'),
+            h('div',{style:{display:'flex',flexDirection:'column',gap:7,flex:1,overflowY:'auto'}},
+              bMA.map((t,i)=>{const pb=t.ma>0?((t.ma-t.ytd)/t.ma*100).toFixed(0):0;return h('div',{key:i,onClick:()=>setTModal(t),style:{background:C.surface,borderRadius:8,padding:'9px 11px',border:`1px solid ${C.border}`,cursor:'pointer'},onMouseEnter:e=>e.currentTarget.style.borderColor=`${C.amber}60`,onMouseLeave:e=>e.currentTarget.style.borderColor=C.border},
+                h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}},h('div',{style:{display:'flex',alignItems:'center',gap:7}},h('span',{style:{fontSize:14,fontWeight:700,color:C.text}},t.name),h(Tag,{label:t.batch,color:C.muted})),h('div',{style:{display:'flex',alignItems:'center',gap:8}},h('span',{style:{fontSize:9,color:C.amber}},`−${pb}% · ${t.days}d`),h('span',{style:{fontSize:11,color:C.amber}},'↗'))),
+                h('div',{style:{display:'flex',gap:20}},h('div',null,h('div',{style:{fontSize:8,color:C.muted,marginBottom:1}},'YTD P&L'),h('div',{style:{fontSize:12,fontWeight:600,color:C.red}},fmt(t.ytd))),h('div',null,h('div',{style:{fontSize:8,color:C.muted,marginBottom:1}},'30d Avg'),h('div',{style:{fontSize:12,color:C.dim}},fmt(t.ma))))
+              );})
+            )
+          ),
+
+          h(Card,{style:{minHeight:0}},
+            h(Hdr,{txt:'VAR ALERTS — ACTIVE TRADERS',accent:C.amber}),
+            h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,flex:1,minHeight:0}},
+              [{key:'high',label:'HIGH >150%',icon:'↑',c:C.red},{key:'low',label:'LOW <50%',icon:'↓',c:C.muted}].map(side=>
+                h('div',{key:side.key,style:{display:'flex',flexDirection:'column',gap:5}},
+                  h('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:4}},h('span',{style:{fontSize:8,fontWeight:700,color:side.c}},`${side.icon} ${side.label}`),h(Tag,{label:varA[side.key].length,color:side.c})),
+                  varA[side.key].map((t,i)=>h('div',{key:i,style:{background:C.surface,borderRadius:7,padding:'7px 10px',border:`1px solid ${C.border}`}},h('div',{style:{display:'flex',justifyContent:'space-between'}},h('span',{style:{fontSize:13,fontWeight:700,color:C.text}},t.name),h('span',{style:{fontSize:11,fontWeight:700,color:side.c}},`${(t.v/t.avg*100).toFixed(0)}%`)),h('div',{style:{fontSize:9,color:C.dim,marginTop:2}},`${fmt(t.v)} vs ${fmt(t.avg)}`)))
+                )
+              )
+            )
+          ),
+
+          h(Card,{style:{minHeight:0,borderColor:`${C.red}40`}},
+            h('div',{style:{display:'flex',alignItems:'center',gap:8,flexShrink:0,marginBottom:10}},h(Hdr,{txt:'BLOCKED CONTRACTS',accent:C.red}),h(Tag,{label:`${blk.filter(c=>c.traders.length).length} exposed`,color:C.red})),
+            h('div',{style:{display:'flex',flexDirection:'column',gap:7,flex:1}},
+              blk.map((c,i)=>h('div',{key:i,style:{background:C.surface,borderRadius:8,padding:'9px 11px',border:`1px solid ${c.traders.length?`${C.red}40`:C.border}`}},
+                h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:c.traders.length?6:0}},h('span',{style:{fontSize:13,fontWeight:700,color:c.traders.length?C.red:C.text}},c.contract),h('span',{style:{fontSize:9,color:C.dim}},`exp. ${c.expiry}`)),
+                c.traders.length?h('div',{style:{display:'flex',gap:5}},c.traders.map((t,j)=>h(Tag,{key:j,label:t,color:C.red}))):h('div',{style:{fontSize:9,color:C.muted}},'No exposed traders')
+              ))
+            )
+          )
+        ),
+
+        modal&&h(PnLModal,{close:()=>setModal(false)}),
+        tModal&&h(TraderModal,{trader:tModal,close:()=>setTModal(null)})
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(h(Dashboard,null));
+
+  } catch(err) {
+    document.getElementById('loading').style.display='none';
+    document.getElementById('root').innerHTML=`<div style="padding:40px;color:#FF4560;font-family:monospace"><h2>Error loading dashboard</h2><pre style="margin-top:16px;font-size:12px;color:#7A90A8">${err.message}\n${err.stack}</pre></div>`;
+  }
+});
 </script>
 </body>
 </html>
